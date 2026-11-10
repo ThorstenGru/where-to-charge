@@ -42,11 +42,13 @@ main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
 h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:4px 0 14px}
 h2{font-size:15px;font-weight:700;margin:0 0 10px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
-.verdict{border-radius:16px;padding:18px 16px;margin-bottom:12px;border:2px solid currentColor}
+.verdict{border-radius:16px;padding:18px 16px;margin-bottom:12px;border:4px solid currentColor}
+.verdict .lab{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px}
+.verdict .act{font-size:19px;font-weight:700;color:var(--ink);margin:0 0 8px}
 .verdict.remote{background:var(--remote-bg);color:var(--remote)}
 .verdict.home{background:var(--home-bg);color:var(--home)}
 .verdict.hev{background:var(--hev-bg);color:var(--hev)}
-.verdict .big{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 6px}
+.verdict .big{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:0 0 6px}
 .verdict .sub{color:var(--ink);font-size:15px;margin:0}
 .verdict .sub + .sub{margin-top:4px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
@@ -260,25 +262,25 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var el = $("verdict");
     var best = c.opts[0];
     var h = c.opts.filter(function(o){ return o.id === "home"; })[0];
-    var cls, big, l1, l2 = "";
+    var cls, big, act, l1, l2 = "";
     if(c.free < 0.5){
-      cls = "hev"; big = "Do not charge";
+      cls = "hev"; big = "Do not charge"; act = "Do not plug in. Drive in hybrid mode.";
       l1 = "The battery is practically full. Drive in hybrid mode.";
     } else if(best.net < 0.3){
-      cls = "hev"; big = "Drive in HEV mode";
-      l1 = "Every charging option saves less than 0.30 SEK per kWh. It is not worth planning for.";
+      cls = "hev"; big = "Drive in HEV mode"; act = best.net > 0 ? "Do not bother plugging in. The saving is too small." : "Do not plug in. Petrol is cheaper today.";
+      l1 = best.net > 0 ? "The best option saves only " + fmt(best.net) + " SEK per kWh, below the 0.30 SEK/kWh needed to make it worth the effort." : "Charging costs more than petrol per km today.";
     } else if(best.remote){
-      cls = "remote"; big = "Charge on the road";
+      cls = "remote"; big = "Charge on the road"; act = "Plug in at " + best.name + " (" + fmt(S.hours, 1) + " h).";
       l1 = best.name + " at " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh in " + fmt(S.hours, 1) + " h, " + sek(best.total) + " versus petrol.";
       var rest = c.free - best.kwh;
       if(rest > 0.5 && h.net > 0){ l2 = "Top up the rest (" + fmt(rest, 1) + " kWh) at home: " + sek(h.net * rest) + "."; }
     } else {
-      cls = "home"; big = "Charge at home";
+      cls = "home"; big = "Charge at home"; act = "Plug in when you get home.";
       l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
       l2 = c.opts.length === 1 ? "Tap \"Find my location\" below and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
     }
     el.className = "verdict " + cls;
-    el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
+    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big">' + big + '</p><p class="act">' + esc(act) + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
   }
 
   function renderBreak(c){
