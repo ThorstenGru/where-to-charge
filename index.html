@@ -33,14 +33,6 @@
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"]{
-  --bg:#0f1512; --surface:#18211c; --ink:#e8efe9; --muted:#97a69d; --line:#2b3831;
-  --home:#7db4f0; --home-bg:#16293e;
-  --remote:#5fd18a; --remote-bg:#12301d;
-  --hev:#f0b44f; --hev-bg:#3a2a0c;
-  --neg:#ff8a80; --focus:#7db4f0;
-  color-scheme: dark;
-}
 html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -59,6 +51,7 @@ h2{font-size:15px;font-weight:700;margin:0 0 10px}
 .verdict .sub + .sub{margin-top:4px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .field{flex:1 1 120px;min-width:0}
+.gap{height:14px}
 label.l{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 input[type="text"]{width:100%;font:inherit;font-size:17px;padding:10px 10px;border-radius:10px;
   border:1px solid var(--line);background:var(--bg);color:var(--ink)}
@@ -69,22 +62,25 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:700}
 .chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
-  background:var(--bg);color:var(--ink);cursor:pointer}
+  background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.chip[aria-pressed="true"]{border-color:var(--remote);box-shadow:0 0 0 2px var(--remote) inset}
 .opt{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;
   padding:10px 0;border-top:1px solid var(--line)}
 .opt:first-of-type{border-top:0}
-.opt input[type="checkbox"]{width:22px;height:22px;accent-color:var(--remote)}
+.opt input[type="checkbox"],.opt input[type="radio"]{width:22px;height:22px;accent-color:var(--remote)}
 .opt .name{font-weight:600}
 .opt .meta{grid-column:2 / 4;font-size:13px;color:var(--muted)}
 .opt .price{width:84px;text-align:right}
 .net{font-weight:700;white-space:nowrap}
 .pos{color:var(--remote)} .neg{color:var(--neg)}
 .small{font-size:13px;color:var(--muted)}
-.tablewrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{text-align:right;padding:6px 6px;border-top:1px solid var(--line);white-space:nowrap}
-th:first-child,td:first-child{text-align:left}
-th{font-weight:600;color:var(--muted);border-top:0}
+.hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+.cmp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.cmp.best{border:2px solid var(--remote)}
+.cmp h3{font-size:15px;margin:0 0 4px;display:flex;justify-content:space-between;gap:8px}
+.cmp p{margin:3px 0;font-size:14px}
+.badge{font-size:12px;font-weight:700;color:var(--remote);white-space:nowrap}
+details summary{cursor:pointer;font-weight:700;font-size:14px}
 </style>
 </head>
 <body>
@@ -97,7 +93,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
     <h2>Today</h2>
     <div class="row">
       <div class="field">
-        <label class="l" for="petrol">Petrol (SEK/l)</label>
+        <label class="l" for="petrol">Petrol 95 (SEK/l)</label>
         <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
       </div>
       <div class="field">
@@ -105,30 +101,36 @@ th{font-weight:600;color:var(--muted);border-top:0}
         <input id="home" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
-    <div class="chips">
-      <button class="chip" data-petrol="18.80">From 1 Dec: 18.80</button>
-      <button class="chip" id="homechip" hidden></button>
-    </div>
-    <div style="height:12px"></div>
+    <p id="petrolsrc" class="hint"></p>
+    <p class="hint">Home price = pure energy price per kWh incl. VAT, without fixed fees: (monthly spot + variable costs 0.115 + grid transfer 0.258 + energy tax 0.36) × 1.25, from your October 2026 bills. You pay the average of the whole month, so the hour of charging does not matter. Tap a month to use its price:</p>
+    <div id="months" class="chips"></div>
+    <p id="monthnote" class="hint"></p>
+
+    <div class="gap"></div>
     <label class="l">Season</label>
     <div class="seg" role="group" aria-label="Season">
       <button id="sWinter" aria-pressed="true">Winter</button>
       <button id="sSummer" aria-pressed="false">Summer</button>
     </div>
-    <div style="height:12px"></div>
-    <label class="l" for="soc">Battery level: <b id="socv"></b></label>
+    <p id="seasonnote" class="hint"></p>
+
+    <div class="gap"></div>
+    <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
     <input id="soc" type="range" min="0" max="100" step="5">
-    <div style="height:8px"></div>
+    <p class="hint">The 13.8 kWh battery is never fully used: the car keeps a reserve at the bottom and a buffer at the top. 0 % on the car's display means "empty, hybrid mode takes over", 100 % means "full". Only the usable part (about 10.4 kWh from the socket, 54 km WLTP) can be recharged, and that is what this tool counts.</p>
+
+    <div class="gap"></div>
+    <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
+    <input id="hours" type="range" min="0.5" max="12" step="0.5">
+
+    <div class="gap"></div>
     <div class="row">
       <div class="field">
-        <label class="l" for="hours">Time parked on the road (h)</label>
-        <input id="hours" type="text" inputmode="decimal" autocomplete="off">
-      </div>
-      <div class="field">
-        <label class="l" for="kw">Charging power (kW)</label>
+        <label class="l" for="kw">Car's max AC charging power (kW)</label>
         <input id="kw" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
+    <p id="pwnote" class="hint"></p>
   </section>
 
   <section class="card">
@@ -143,21 +145,24 @@ th{font-weight:600;color:var(--muted);border-top:0}
     <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
     <p id="locmsg" class="small" style="margin:8px 0 0"></p>
     <h2 style="margin:14px 0 6px">Petrol 95 nearby</h2>
-    <div id="petrols" class="small">After "Here I am" the 5 nearest petrol stations appear. Pick one and its price is used.</div>
+    <div id="petrols" class="small">After "Find my location" the 5 nearest petrol stations appear. Pick one and its price replaces the petrol price above.</div>
     <h2 style="margin:14px 0 6px">Nearest 5 chargers (Type 2, AC)</h2>
-    <div id="stations" class="small">After "Here I am" the 5 nearest chargers appear.</div>
-    <p class="small" style="margin:8px 0 0">Tick = I will pass by. Home is always a comparison option. A charger without a price is not counted, so enter the price from its app. Data: eurofuelprices.com (Open Charge Map, NOBIL, operator list prices).</p>
+    <div id="stations" class="small">After "Find my location" the 5 nearest chargers appear. Pick the one you will use: its price and power are then used in the comparison.</div>
+    <p class="small" style="margin:8px 0 0">A charger without a price is not counted, so enter the price from its app. Data: eurofuelprices.com (Open Charge Map, NOBIL, operator list prices).</p>
   </section>
 
   <section class="card">
     <h2>Comparison</h2>
-    <div class="tablewrap"><table id="cmp"></table></div>
-    <p id="rate" class="small" style="margin:10px 0 0"></p>
+    <div id="cmp"></div>
+    <details>
+      <summary>How the numbers are calculated</summary>
+      <p id="rate" class="small"></p>
+    </details>
   </section>
 
   <section class="card">
     <h2>Assumptions</h2>
-    <p class="small" style="margin:0">Santa Fe PHEV, usable charge about 10.4 kWh from the socket (54 km WLTP). Summer: 19 kWh/100 km electric, 7.0 l/100 km petrol. Winter: 25 kWh/100 km electric, 8.3 l/100 km petrol. Gain = petrol price saved minus electricity price per kWh. Home electricity is a monthly-average contract, so the time of day does not matter. Range and winter consumption are estimates. Parking fees and detours are not included.</p>
+    <p class="small" style="margin:0">Santa Fe PHEV 2025: battery 13.8 kWh gross, usable about 10.4 kWh from the socket (54 km WLTP). Charging is AC only. Winter and summer consumption, and the home-price forecast, are estimates (see the notes above). Parking fees, idle fees and detours are not included.</p>
   </section>
 </main>
 
@@ -166,57 +171,61 @@ th{font-weight:600;color:var(--muted);border-top:0}
   var KEY = "wo-laden-heute-v1";
   var USABLE_KWH = 10.4;
   var SEASONS = {
-    winter:{el:25, l:8.3},
-    summer:{el:19, l:7.0}
+    winter:{el:25, l:8.3, km:30, note:"Winter (about -5 to +5 °C): heating and cold battery raise electric consumption to 25 kWh/100 km (about 30 km range) and petrol use to 8.3 l/100 km."},
+    summer:{el:19, l:7.0, km:50, note:"Summer: mild weather, 19 kWh/100 km electric (about 50 km range) and 7.0 l/100 km petrol."}
   };
-  var DEFAULT = {
-    petrol:15.80, home:4.59, season:"winter", soc:20, hours:1, kw:3.6,
-    ov:{}, off:{}   // ov: own charger prices by charger id, off: deselected chargers
-  };
+  var DEFAULT = {petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
   var S;
   try{ var raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
   if(!S || !S.ov){ S = JSON.parse(JSON.stringify(DEFAULT)); }
+  S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
   var BASE = "https://eurofuelprices.com/";
-  // Home electricity per the Oct 2026 invoices: (spot + variable 0.11497 + grid transfer 0.2584 + energy tax 0.36) * 1.25. The 0.06 markup and 0.06 discount cancel until 2027-05-31.
-  var HOME_ADD = 0.73337;
-  var N = {ch:[], pe:[], pick:-1};
+  // From the Oct 2026 bills: variable 0.11497 + grid transfer 0.2584 + energy tax 0.36 (SEK/kWh excl. VAT). The 0.06 markup and 0.06 discount cancel until 2027-05-31.
+  var HOME_ADD = 0.73337, VAT = 1.25;
+  var BILL = {month:10, year:2026, spot:1.5667};   // October 2026 bill: monthly spot average excl. VAT
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var N = {ch:[], pe:[], pick:-1, months:[]};
   function hav(a,b,c,d){ var r=Math.PI/180, x=(c-a)*r, y=(d-b)*r, q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2); return 12742*Math.asin(Math.sqrt(q)); }
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
   function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
-
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
   function num(v, fb){ var x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : fb; }
   function fmt(x, d){ return x.toFixed(d === undefined ? 2 : d); }
   function sek(x){ return (x > 0 ? "+" : "") + fmt(x, 2) + " SEK"; }
   var $ = function(id){ return document.getElementById(id); };
+  function home(spot){ return (spot + HOME_ADD) * VAT; }
+  function selCharger(){ return N.ch.filter(function(c){ return c.id === S.sel && c.price > 0; })[0] || null; }
 
   function calc(){
     var se = SEASONS[S.season];
-    var lPerKwh = se.l / se.el;
+    var lPerKwh = se.l / se.el, per = 100 / se.el;
     var value = lPerKwh * S.petrol;
     var free = Math.max(0, USABLE_KWH * (1 - S.soc/100));
-    var opts = [];
-    opts.push({id:"home", name:"Home", price:S.home, kwh:free, remote:false});
-    N.ch.forEach(function(c){
-      if(!S.off[c.id] && c.price > 0){
-        var pw = Math.min(S.kw, c.kw || S.kw);
-        opts.push({id:c.id, name:c.name, price:c.price, pw:pw, kwh:Math.min(free, S.hours*pw), remote:true});
-      }
-    });
+    var opts = [{id:"home", name:"Home", price:S.home, kwh:free, pw:0, remote:false}];
+    var c = selCharger();
+    if(c){
+      var pw = Math.min(S.kw, c.kw || S.kw);
+      opts.push({id:c.id, name:c.name, price:c.price, pw:pw, kwh:Math.min(free, S.hours*pw), remote:true, src:c.src, dist:c.dist});
+    }
     opts.forEach(function(o){
       o.net = value - o.price;
+      o.cost = o.kwh * o.price;
+      o.km = o.kwh * per;
+      o.litres = o.kwh * lPerKwh;
+      o.saved = o.litres * S.petrol;
       o.total = o.net * o.kwh;
       o.be = o.price / lPerKwh;
     });
     opts.sort(function(a,b){ return b.net - a.net; });
-    return {opts:opts, value:value, lPerKwh:lPerKwh, free:free, se:se};
+    return {opts:opts, value:value, lPerKwh:lPerKwh, per:per, free:free, se:se};
   }
 
   function renderVerdict(c){
     var el = $("verdict");
     var best = c.opts[0];
-    var home = c.opts.filter(function(o){ return o.id === "home"; })[0];
+    var h = c.opts.filter(function(o){ return o.id === "home"; })[0];
     var cls, big, l1, l2 = "";
     if(c.free < 0.5){
       cls = "hev"; big = "Do not charge";
@@ -226,30 +235,45 @@ th{font-weight:600;color:var(--muted);border-top:0}
       l1 = "Every charging option saves less than 0.30 SEK per kWh. It is not worth planning for.";
     } else if(best.remote){
       cls = "remote"; big = "Charge on the road";
-      l1 = best.name + " at " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh, " + sek(best.total) + " versus petrol.";
+      l1 = best.name + " at " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh in " + fmt(S.hours, 1) + " h, " + sek(best.total) + " versus petrol.";
       var rest = c.free - best.kwh;
-      if(rest > 0.5 && home.net > 0){
-        l2 = "You can top up the rest (" + fmt(rest, 1) + " kWh) at home: " + sek(home.net * rest) + ".";
-      }
+      if(rest > 0.5 && h.net > 0){ l2 = "Top up the rest (" + fmt(rest, 1) + " kWh) at home: " + sek(h.net * rest) + "."; }
     } else {
       cls = "home"; big = "Charge at home";
       l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
-      if(c.opts.length === 1){ l2 = "Tap \"Here I am\" below and enter a price for a charger from its app."; }
-      else { l2 = "The selected chargers are more expensive than home."; }
+      l2 = c.opts.length === 1 ? "Tap \"Find my location\" below and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
     }
     el.className = "verdict " + cls;
-    el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + l2 + '</p>' : '');
+    el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
   }
 
-  // Trip: electric km = battery now + charge on site (best ticked charger, capped at one full battery, assumed to happen mid-trip).
+  function renderCompare(c){
+    var h = "";
+    c.opts.forEach(function(o, i){
+      var how = o.remote
+        ? "In " + fmt(S.hours, 1) + " h at " + fmt(o.pw, 1) + " kW you can charge " + fmt(S.hours * o.pw, 1) + " kWh; the battery has room for " + fmt(c.free, 1) + " kWh. So " + fmt(o.kwh, 1) + " kWh are charged."
+        : "At home there is no time limit, so the battery is filled up: " + fmt(o.kwh, 1) + " kWh.";
+      h += '<div class="cmp' + (i === 0 ? " best" : "") + '"><h3><span>' + esc(o.remote ? o.name : "Charge at home") + '</span>' + (i === 0 ? '<span class="badge">best per kWh</span>' : '') + '</h3>' +
+        '<p>' + how + '</p>' +
+        '<p><b>You pay:</b> ' + fmt(o.kwh, 1) + ' kWh × ' + fmt(o.price) + ' = ' + fmt(o.cost) + ' SEK</p>' +
+        '<p><b>You save on petrol:</b> ' + fmt(o.km, 0) + ' km electric = ' + fmt(o.litres, 1) + ' l = ' + fmt(o.saved) + ' SEK</p>' +
+        '<p><b>Result:</b> <span class="net ' + (o.total >= 0 ? "pos" : "neg") + '">' + sek(o.total) + '</span> (' + sek(o.net) + ' per kWh)</p>' +
+        '<p class="small">Charging here beats petrol as long as petrol costs more than ' + fmt(o.be) + ' SEK/l (now ' + fmt(S.petrol) + ').' + (o.remote && o.src ? ' Price: ' + esc(o.src) + '.' : '') + '</p></div>';
+    });
+    h += '<div class="cmp"><h3><span>Do not charge (HEV mode)</span></h3><p>The car runs on petrol and keeps the charge level. Electricity cost: 0 SEK. Every option above is measured against this: its result is what you save compared with driving the same kilometres on petrol.</p></div>';
+    $("cmp").innerHTML = h;
+    $("rate").textContent = "1 kWh from the socket gives " + fmt(c.per, 1) + " km electric (" + c.se.el + " kWh/100 km), which replaces " + fmt(c.lPerKwh, 2) + " l of petrol (" + c.se.l + " l/100 km). At " + fmt(S.petrol) + " SEK/l that is worth " + fmt(c.value) + " SEK per kWh. Gain per kWh = that value minus the electricity price. The decision picks the highest gain per kWh. Below 0.30 SEK/kWh, or with an almost full battery, the advice is HEV mode.";
+  }
+
+  // Trip: electric km = battery now + charge on site (chosen charger, capped at one full battery, assumed to happen mid-trip).
   function renderTrip(c){
     var o = $("tripout"), km = S.trip || 0;
     if(km <= 0){ o.textContent = "Enter the round-trip distance to see if it works fully electric."; return; }
-    var per = 100 / c.se.el, batt = USABLE_KWH * S.soc / 100;
+    var batt = USABLE_KWH * S.soc / 100;
     var r = c.opts.filter(function(x){ return x.remote; })[0];
     var add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
-    var kmBatt = batt * per, kmAll = (batt + add) * per;
-    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Tick a charger to add charging on site.");
+    var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
+    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger below to add charging on site.");
     if(kmAll >= km){ t += " Fully electric: yes (" + fmt(km, 0) + " km trip)."; }
     else {
       var l = (km - kmAll) * c.se.l / 100;
@@ -258,32 +282,22 @@ th{font-weight:600;color:var(--muted);border-top:0}
     o.textContent = t;
   }
 
-  function renderTable(c){
-    var h = '<tr><th>Option</th><th>SEK/kWh</th><th>Gain/kWh</th><th>Total</th><th>Petrol from</th></tr>';
-    c.opts.forEach(function(o, i){
-      var n = esc(o.name);
-      h += '<tr><td>' + (i === 0 ? "<b>" + n + "</b>" : n) + '</td><td>' + fmt(o.price) + '</td><td class="' + (o.net >= 0 ? "pos" : "neg") + '">' + fmt(o.net) + '</td><td class="' + (o.total >= 0 ? "pos" : "neg") + '">' + fmt(o.total) + '</td><td>' + fmt(o.be) + '</td></tr>';
-    });
-    $("cmp").innerHTML = h;
-    $("rate").textContent = "1 kWh replaces " + fmt(c.lPerKwh, 2) + " l of petrol and gives " + fmt(100 / c.se.el, 1) + " km electric, which is worth " + fmt(c.value) + " SEK at " + fmt(S.petrol) + " SEK/l. Column \"Petrol from\": the option pays off from this petrol price (SEK/l).";
-  }
-
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-
   function renderStations(){
     var wrap = $("stations");
-    wrap.className = "";
-    wrap.innerHTML = "";
+    wrap.className = ""; wrap.innerHTML = "";
+    var none = document.createElement("div"); none.className = "opt";
+    none.innerHTML = '<input type="radio" name="ch" id="chnone" ' + (S.sel ? "" : "checked") + '><label class="name" for="chnone">No charger (home only)</label>';
+    wrap.appendChild(none);
+    none.querySelector("input").addEventListener("change", function(){ S.sel = null; save(); update(); });
     N.ch.forEach(function(c){
-      var d = document.createElement("div");
-      d.className = "opt";
+      var d = document.createElement("div"); d.className = "opt";
       d.innerHTML =
-        '<input type="checkbox" id="c' + c.id + '" ' + (S.off[c.id] ? "" : "checked") + ' aria-label="' + esc(c.name) + '">' +
+        '<input type="radio" name="ch" id="c' + c.id + '" ' + (S.sel === c.id ? "checked" : "") + ' aria-label="' + esc(c.name) + '">' +
         '<label class="name" for="c' + c.id + '">' + esc(c.name) + '</label>' +
         '<input class="price" type="text" inputmode="decimal" id="p' + c.id + '" value="' + (c.price > 0 ? fmt(c.price) : "") + '" placeholder="SEK/kWh" aria-label="Price ' + esc(c.name) + '">' +
         '<span class="meta" id="m' + c.id + '"></span>';
       wrap.appendChild(d);
-      d.querySelector("#c" + c.id).addEventListener("change", function(e){ if(e.target.checked){ delete S.off[c.id]; } else { S.off[c.id] = 1; } save(); update(); });
+      d.querySelector("#c" + c.id).addEventListener("change", function(){ S.sel = c.id; save(); update(); });
       d.querySelector("#p" + c.id).addEventListener("input", function(e){
         var v = num(e.target.value, 0); S.ov[c.id] = v; c.price = v; c.src = "own price"; save(); update();
       });
@@ -293,9 +307,9 @@ th{font-weight:600;color:var(--muted);border-top:0}
   function renderMeta(c){
     N.ch.forEach(function(s){
       var m = $("m" + s.id); if(!m) return;
-      var h = fmt(s.dist, 1) + " km" + (s.kw ? " · " + s.kw + " kW" : "") + " · " + (s.price > 0 ? esc(s.src) : "no price known");
-      if(s.price > 0){ var net = c.value - s.price; h += ' · <span class="net ' + (net >= 0 ? "pos" : "neg") + '">' + sek(net) + '/kWh</span>'; }
-      m.innerHTML = h;
+      var t = fmt(s.dist, 1) + " km" + (s.kw ? " · " + s.kw + " kW" : "") + " · " + (s.price > 0 ? esc(s.src) : "no price known");
+      if(s.price > 0){ var net = c.value - s.price; t += ' · <span class="net ' + (net >= 0 ? "pos" : "neg") + '">' + sek(net) + '/kWh</span>'; }
+      m.innerHTML = t;
     });
   }
 
@@ -305,11 +319,22 @@ th{font-weight:600;color:var(--muted);border-top:0}
     w.className = ""; w.innerHTML = "";
     N.pe.forEach(function(p, i){
       var d = document.createElement("div"); d.className = "opt";
-      d.innerHTML = '<input type="radio" name="pp" id="pp' + i + '" ' + (N.pick === i ? "checked" : "") + ' style="width:22px;height:22px">' +
+      d.innerHTML = '<input type="radio" name="pp" id="pp' + i + '" ' + (N.pick === i ? "checked" : "") + '>' +
         '<label class="name" for="pp' + i + '">' + esc(p.name) + '</label><b>' + fmt(p.price) + '</b>' +
         '<span class="meta">' + fmt(p.dist, 1) + ' km · ' + (p.date ? "as of " + p.date : "date unknown") + '</span>';
       w.appendChild(d);
       d.querySelector("input").addEventListener("change", function(){ N.pick = i; S.petrol = p.price; save(); syncInputs(); update(); });
+    });
+  }
+
+  function renderMonths(){
+    var w = $("months"); w.innerHTML = "";
+    N.months.forEach(function(m){
+      var b = document.createElement("button"); b.className = "chip";
+      b.setAttribute("aria-pressed", Math.abs(S.home - m.price) < 0.005 ? "true" : "false");
+      b.innerHTML = '<b>' + m.label + '</b>: ' + fmt(m.price) + '<br><span class="small">' + m.kind + ', spot ' + fmt(m.spot) + '</span>';
+      b.addEventListener("click", function(){ S.home = Math.round(m.price * 100) / 100; S.homeEdited = true; save(); syncInputs(); update(); });
+      w.appendChild(b);
     });
   }
 
@@ -338,6 +363,9 @@ th{font-weight:600;color:var(--muted);border-top:0}
             else if(tar[c.key]){ c.price = tar[c.key]; c.src = "list price without subscription, as of " + tdate; }
             return c;
           });
+        // Preselect the cheapest charger that has a price (the user can change or clear it).
+        var cheap = N.ch.filter(function(c){ return c.price > 0; }).sort(function(a,b){ return a.price - b.price; })[0];
+        S.sel = cheap ? cheap.id : null;
         var pe = [];
         r[2].stations.forEach(function(s){
           var p = (s.prices || []).filter(function(q){ return q.octane === 95 && q.price > 12 && q.price < 25; })[0];
@@ -345,59 +373,82 @@ th{font-weight:600;color:var(--muted);border-top:0}
         });
         N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5);
         N.pick = -1; N.pe.forEach(function(p, i){ if(N.pick < 0 || p.price < N.pe[N.pick].price){ N.pick = i; } });
-        if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; save(); }
-        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest petrol is preselected.";
+        if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; }
+        save();
+        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the cheapest charger with a known price are preselected; change them below.";
         renderStations(); renderPetrols(); syncInputs(); update();
       }).catch(function(){ msg.textContent = "Could not load data from eurofuelprices.com."; });
     }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
   }
 
+  // Home price per month. Bill month: actual. Current month: average so far. Next 3 months: estimate = typical seasonal level 2022-25 x how much higher the last 3 months were (no futures price source is available).
   function loadSpot(){
     getJ("elpris.json").then(function(j){
-      var m = j.areas.SE4.monthly[String(new Date().getFullYear())] || [], i = m.length - 1;
+      var a = j.areas.SE4, y = new Date().getFullYear(), m = a.monthly[String(y)] || [], i = m.length - 1;
       while(i >= 0 && m[i] == null){ i--; }
       if(i < 0){ return; }
-      var h = (m[i] + HOME_ADD) * 1.25, b = $("homechip");
-      b.textContent = "Home price from " + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i] + " spot (" + fmt(m[i]) + "): " + fmt(h);
-      b.hidden = false;
-      b.onclick = function(){ S.home = Math.round(h * 100) / 100; save(); syncInputs(); update(); };
-    }).catch(function(){});
+      var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i+1);
+      var rat = [], k;
+      for(k = Math.max(0, i-2); k <= i; k++){ var sm = a.seasonal[String(k+1)]; if(m[k] != null && sm && sm.mean > 0){ rat.push(m[k] / sm.mean); } }
+      var f = rat.reduce(function(s, x){ return s + x; }, 0) / rat.length;
+      var list = [];
+      if(BILL.year === y && BILL.month - 1 < i){ list.push({label:MON[BILL.month-1], spot:BILL.spot, kind:"your bill"}); }
+      list.push({label:MON[i], spot:m[i], kind:part ? "so far, " + a.partial.days + " days" : "month average"});
+      for(k = 1; k <= 3; k++){ var mi = (i + k) % 12, sm2 = a.seasonal[String(mi+1)]; if(sm2){ list.push({label:MON[mi], spot:sm2.mean * f, kind:"estimate"}); } }
+      N.months = list.map(function(x){ x.price = home(x.spot); return x; });
+      var cur = N.months.filter(function(x){ return x.label === MON[i]; })[0];
+      if(!S.homeEdited){ S.home = Math.round(cur.price * 100) / 100; save(); }
+      $("monthnote").textContent = "Estimates are not market forecasts: they take the typical monthly pattern of 2022-2025 and scale it by how much higher the last 3 months were (factor " + fmt(f, 1) + "). Real prices can differ a lot. Spot = SE4 monthly average excl. VAT.";
+      renderMonths(); syncInputs(); update();
+    }).catch(function(){ $("monthnote").textContent = "Could not load spot prices. Enter your home price by hand."; });
   }
 
   function syncInputs(){
+    var se = SEASONS[S.season], c = selCharger();
     $("petrol").value = fmt(S.petrol);
     $("home").value = fmt(S.home);
-    $("hours").value = fmt(S.hours, 1);
     $("kw").value = fmt(S.kw, 1);
+    $("hours").value = S.hours; $("hoursv").textContent = fmt(S.hours, 1) + " h";
     $("trip").value = fmt(S.trip || 0, 0);
-    $("soc").value = S.soc;
+    $("soc").value = S.soc; $("socv").textContent = S.soc + " %";
+    $("sWinter").setAttribute("aria-pressed", S.season === "winter");
+    $("sSummer").setAttribute("aria-pressed", S.season === "summer");
+    notes();
+  }
+
+  // Text that follows the state but never touches the input fields (so typing is not interrupted).
+  function notes(){
+    var se = SEASONS[S.season], c = selCharger();
+    $("hoursv").textContent = fmt(S.hours, 1) + " h";
     $("socv").textContent = S.soc + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.season === "summer");
+    $("seasonnote").textContent = se.note;
+    var p = N.pe[N.pick];
+    $("petrolsrc").textContent = p && Math.abs(p.price - S.petrol) < 0.005 ? "Petrol price from " + p.name + ", " + fmt(p.dist, 1) + " km away" + (p.date ? ", as of " + p.date : ", date unknown") + ". No forecast: today's pump price only." : "Default or hand-entered petrol price. Tap \"Find my location\" to use a pump near you. No forecast: today's price only.";
+    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick below.";
   }
 
   function update(){
     var c = calc();
     renderVerdict(c);
-    renderTable(c);
+    renderCompare(c);
     renderMeta(c);
     renderTrip(c);
+    renderMonths();
+    notes();
   }
 
-  $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); save(); update(); });
-  $("home").addEventListener("input", function(e){ S.home = num(e.target.value, S.home); save(); update(); });
-  $("hours").addEventListener("input", function(e){ S.hours = Math.max(0, num(e.target.value, S.hours)); save(); update(); });
+  $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); N.pick = -1; save(); update(); });
+  $("home").addEventListener("input", function(e){ S.home = num(e.target.value, S.home); S.homeEdited = true; save(); update(); });
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
+  $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
-  $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); $("socv").textContent = S.soc + " %"; save(); update(); });
-  $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); syncInputs(); update(); });
-  $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); syncInputs(); update(); });
-  Array.prototype.forEach.call(document.querySelectorAll(".chip[data-petrol]"), function(b){
-    b.addEventListener("click", function(){ S.petrol = parseFloat(b.getAttribute("data-petrol")); save(); syncInputs(); update(); });
-  });
+  $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
+  $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
+  $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); update(); });
   $("loc").addEventListener("click", locate);
 
-  syncInputs();
   update();
   loadSpot();
 })();

@@ -57,6 +57,9 @@ Decision: the best gain per kWh wins. Below 0.30 SEK/kWh, or with an almost full
 - Trip mode: enter round-trip km. Electric km = (battery now + charge on site) x 100 / kWh per 100 km. Charge on site = best ticked charger, parking hours x min(car kW, charger kW), capped at one full battery (assumes the charge happens mid-trip). Shows fully electric yes/no, otherwise petrol km, litres and SEK.
 - PWA basics: `manifest.json`, icons (192, 512, apple-touch), standalone display. No service worker, because the page needs live data anyway.
 
+- UI rework (2026-11-10): petrol from the chosen nearby pump (no price forecast); home price per month (last bill, current month, 3 estimated months) as pure energy price incl. VAT without fixed fees; explanations for season, battery level and charging power; parking time slider 0.5-12 h; one chosen charger (radio) sets price and power (min of car limit and charger kW); detailed per-option comparison (kWh, cost, petrol saved, result, break-even petrol price).
+- Month estimates = typical 2022-25 monthly spot level (elpris.json `seasonal`) x ratio of the last 3 months to that pattern. This is NOT a market forecast; no futures price source is available.
+
 ## Ideas for next steps
 - Annual calculation by mileage, split summer/winter.
 - Automatic season preset by date.
