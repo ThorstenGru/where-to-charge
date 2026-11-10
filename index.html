@@ -193,9 +193,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var USABLE_KWH = 10.4;
   var HOLD_DEFAULT = 15;   // static default: % on the display where the car holds charge in hybrid mode (changeable in the page)
   var SEASONS = {
-    winter:{el:25, l:8.3, km:30, note:"Winter (about -5 to +5 °C): heating and cold battery raise electric consumption to 25 kWh/100 km (about 30 km range) and petrol use to 8.3 l/100 km."},
-    summer:{el:19, l:7.0, km:50, note:"Summer: mild weather, 19 kWh/100 km electric (about 50 km range) and 7.0 l/100 km petrol."}
+    winter:{el:25, l:8.3, name:"Winter (about -5 to +5 °C): heating and a cold battery raise"},
+    summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
   };
+  function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
   var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
   // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price, charger choice) are stored only when the user typed them.
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"}, TRANSIENT = {sel:1};
@@ -243,7 +244,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var c = selCharger();
     if(c){
       var pw = Math.min(S.kw, c.kw || S.kw);
-      opts.push({id:c.id, name:c.name, price:c.price, pw:pw, kwh:Math.min(free, S.hours*pw), remote:true, src:c.src, dist:c.dist});
+      opts.push({id:c.id, name:c.name, price:c.price, pw:pw, kwh:Math.min(free, S.hours*pw), remote:true, src:c.src});
     }
     opts.forEach(function(o){
       o.net = value - o.price;
@@ -319,7 +320,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var o = $("tripout"), km = S.trip || 0;
     if(km <= 0){ o.textContent = "Enter the round-trip distance to see if it works fully electric."; return; }
     var batt = USABLE_KWH * (Math.max(S.soc, S.hold) - S.hold) / (100 - S.hold);
-    var r = c.opts.filter(function(x){ return x.remote; })[0];
+    var ch = N.ch.filter(function(x){ return x.id === S.sel; })[0];
+    var r = ch && {name:ch.name, pw:Math.min(S.kw, ch.kw || S.kw)};
     var add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
     var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
     var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger below to add charging on site.");
@@ -381,7 +383,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     N.months.forEach(function(m){
       var b = document.createElement("button"); b.className = "chip";
       b.setAttribute("aria-pressed", Math.abs(S.home - m.price) < 0.005 ? "true" : "false");
-      b.innerHTML = '<b>' + m.label + '</b>: ' + fmt(m.price) + '<br><span class="small">' + m.kind + ', spot ' + fmt(m.spot) + '</span>';
+      b.innerHTML = '<b>' + m.label + '</b>: ' + fmt(m.price) + '<br><span class="small">' + m.kind + ', spot ' + fmt(m.spot) + (m.lo ? '<br>range ' + fmt(m.lo) + ' to ' + fmt(m.hi) : '') + '</span>';
       b.addEventListener("click", function(){ S.home = Math.round(m.price * 100) / 100; S.homeEdited = true; save(); syncInputs(); update(); });
       w.appendChild(b);
     });
@@ -430,40 +432,54 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
   }
 
-  // Home price per month. Bill month: actual. Current month: average so far. Next 3 months: estimate = typical seasonal level 2022-25 x how much higher the last 3 months were (no futures price source is available).
+  // Home price per month. Bill month: actual. Current month: average so far. Next 3 months: estimate.
+  // Estimate = typical level of that month in 2023-25, raised by how much higher the last 3 months were than typical (factor f); the excess fades by 30 % per month.
+  // Range: low = back to the typical level, high = the excess does not fade. There is no futures price source, so this is a rule of thumb, not a market forecast.
+  var DECAY = 0.7, HIST = ["2023", "2024", "2025"];
   function loadSpot(){
     getJ("elpris.json").then(function(j){
       var a = j.areas.SE4, y = new Date().getFullYear(), m = a.monthly[String(y)] || [], i = m.length - 1;
       while(i >= 0 && m[i] == null){ i--; }
       if(i < 0){ return; }
+      var typ = function(k){
+        var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
+        return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
+      };
       var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i+1);
       var rat = [], k;
-      for(k = Math.max(0, i-2); k <= i; k++){ var sm = a.seasonal[String(k+1)]; if(m[k] != null && sm && sm.mean > 0){ rat.push(m[k] / sm.mean); } }
+      for(k = Math.max(0, i-2); k <= i; k++){ if(m[k] != null && typ(k) > 0){ rat.push(m[k] / typ(k)); } }
+      if(!rat.length){ return; }
       var f = rat.reduce(function(s, x){ return s + x; }, 0) / rat.length;
       var list = [];
       if(BILL.year === y && BILL.month - 1 < i){ list.push({label:MON[BILL.month-1], spot:BILL.spot, kind:"your bill"}); }
-      list.push({label:MON[i], spot:m[i], kind:part ? "so far, " + a.partial.days + " days" : "month average"});
-      for(k = 1; k <= 3; k++){ var mi = (i + k) % 12, sm2 = a.seasonal[String(mi+1)]; if(sm2){ list.push({label:MON[mi], spot:sm2.mean * f, kind:"estimate"}); } }
+      var tc = typ(i);
+      if(part && tc > 0){
+        // The bill uses the whole-month average: known days + estimate for the rest of the month.
+        var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
+        list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"full-month estimate (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
+      } else {
+        list.push({label:MON[i], spot:m[i], kind:"month average"});
+      }
+      for(k = 1; k <= 3; k++){
+        var mi = (i + k) % 12, t = typ(mi);
+        if(t > 0){ list.push({label:MON[mi], spot:t * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(t), hi:home(t * f), kind:"estimate"}); }
+      }
       N.months = list.map(function(x){ x.price = home(x.spot); return x; });
       var cur = N.months.filter(function(x){ return x.label === MON[i]; })[0];
       if(!S.homeEdited){ S.home = Math.round(cur.price * 100) / 100; save(); }
-      $("monthnote").textContent = "Estimates are not market forecasts: they take the typical monthly pattern of 2022-2025 and scale it by how much higher the last 3 months were (factor " + fmt(f, 1) + "). Real prices can differ a lot. Spot = SE4 monthly average excl. VAT.";
+      $("monthnote").textContent = "Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now " + fmt(f, 1) + "x), with that excess fading by 30 % per month. The range runs from \"back to normal\" to \"stays as high as now\". Spot = SE4 monthly average excl. VAT. After the 2027-05-31 discount ends, the home price rises by 0.075.";
       renderMonths(); syncInputs(); update();
     }).catch(function(){ $("monthnote").textContent = "Could not load spot prices. Enter your home price by hand."; });
   }
 
   function syncInputs(){
-    var se = SEASONS[S.season], c = selCharger();
     $("petrol").value = fmt(S.petrol);
     $("home").value = fmt(S.home);
     $("kw").value = fmt(S.kw, 1);
-    $("hours").value = S.hours; $("hoursv").textContent = fmt(S.hours, 1) + " h";
+    $("hours").value = S.hours;
     $("trip").value = fmt(S.trip || 0, 0);
     $("hold").value = fmt(S.hold, 0);
     $("soc").min = S.hold; $("soc").value = Math.max(S.soc, S.hold);
-    $("soc").value = Math.max(S.soc, S.hold); $("socv").textContent = S.soc + " %";
-    $("sWinter").setAttribute("aria-pressed", S.season === "winter");
-    $("sSummer").setAttribute("aria-pressed", S.season === "summer");
     notes();
   }
 
@@ -474,7 +490,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     $("socv").textContent = Math.max(S.soc, S.hold) + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.season === "summer");
-    $("seasonnote").textContent = se.note;
+    $("seasonnote").textContent = seasonNote(se);
     var p = N.pe[N.pick];
     $("petrolsrc").textContent = p && Math.abs(p.price - S.petrol) < 0.005 ? "Petrol price from " + p.name + ", " + fmt(p.dist, 1) + " km away" + (p.date ? ", as of " + p.date : ", date unknown") + ". No forecast: today's pump price only." : "Default or hand-entered petrol price. Tap \"Find my location\" to use a pump near you. No forecast: today's price only.";
     $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick below.";

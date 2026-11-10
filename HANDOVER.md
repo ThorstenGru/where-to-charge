@@ -58,7 +58,7 @@ Decision: the best gain per kWh wins. Below 0.30 SEK/kWh, or with an almost full
 - PWA basics: `manifest.json`, icons (192, 512, apple-touch), standalone display. No service worker, because the page needs live data anyway.
 
 - UI rework (2026-11-10): petrol from the chosen nearby pump (no price forecast); home price per month (last bill, current month, 3 estimated months) as pure energy price incl. VAT without fixed fees; explanations for season, battery level and charging power; parking time slider 0.5-12 h; one chosen charger (radio) sets price and power (min of car limit and charger kW); detailed per-option comparison (kWh, cost, petrol saved, result, break-even petrol price).
-- Month estimates = typical 2022-25 monthly spot level (elpris.json `seasonal`) x ratio of the last 3 months to that pattern. This is NOT a market forecast; no futures price source is available.
+- Month estimates (audited 2026-11-10): typical level of the month in 2023-25 (own mean from `monthly`, not the feed's `seasonal`, which includes 2026) raised by f = mean ratio of the last 3 months to typical; the excess fades by 30 % per month. Range = back to typical .. excess persists. The current partial month is estimated as known days + typical-plus-faded-excess for the rest. A rule of thumb, NOT a market forecast (no futures source).
 
 ## Ideas for next steps
 - Annual calculation by mileage, split summer/winter.
