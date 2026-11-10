@@ -124,7 +124,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <input id="hold" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
-    <p class="hint">Read it from the display the next time the car runs in hybrid mode and enter it here. 0 = not set yet.</p>
+    <p class="hint">Default 15 %. Check it on the display the next time the car runs in hybrid mode and correct it here if needed.</p>
 
     <div class="gap"></div>
     <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
@@ -177,15 +177,17 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 (function(){
   var KEY = "wo-laden-heute-v1";
   var USABLE_KWH = 10.4;
+  var HOLD_DEFAULT = 15;   // static default: % on the display where the car holds charge in hybrid mode (changeable in the page)
   var SEASONS = {
     winter:{el:25, l:8.3, km:30, note:"Winter (about -5 to +5 °C): heating and cold battery raise electric consumption to 25 kWh/100 km (about 30 km range) and petrol use to 8.3 l/100 km."},
     summer:{el:19, l:7.0, km:50, note:"Summer: mild weather, 19 kWh/100 km electric (about 50 km range) and 7.0 l/100 km petrol."}
   };
-  var DEFAULT = {hold:0, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
+  var DEFAULT = {hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
   var S;
   try{ var raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
   if(!S || !S.ov){ S = JSON.parse(JSON.stringify(DEFAULT)); }
-  S.hold = Math.min(60, Math.max(0, +S.hold || 0));
+  if(!S.holdEdited){ S.hold = HOLD_DEFAULT; }   // follows the static default until the user changes it
+  S.hold = Math.min(60, Math.max(0, +S.hold));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
   var BASE = "https://eurofuelprices.com/";
@@ -454,7 +456,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
-  $("hold").addEventListener("input", function(e){ S.hold = Math.min(60, Math.max(0, num(e.target.value, 0))); $("soc").min = S.hold; save(); update(); });
+  $("hold").addEventListener("input", function(e){ S.hold = Math.min(60, Math.max(0, num(e.target.value, 0))); S.holdEdited = true; $("soc").min = S.hold; save(); update(); });
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
   $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); update(); });
