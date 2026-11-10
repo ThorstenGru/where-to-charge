@@ -182,11 +182,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     winter:{el:25, l:8.3, km:30, note:"Winter (about -5 to +5 °C): heating and cold battery raise electric consumption to 25 kWh/100 km (about 30 km range) and petrol use to 8.3 l/100 km."},
     summer:{el:19, l:7.0, km:50, note:"Summer: mild weather, 19 kWh/100 km electric (about 50 km range) and 7.0 l/100 km petrol."}
   };
-  var DEFAULT = {hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
-  var S;
-  try{ var raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
-  if(!S || !S.ov){ S = JSON.parse(JSON.stringify(DEFAULT)); }
-  if(!S.holdEdited){ S.hold = HOLD_DEFAULT; }   // follows the static default until the user changes it
+  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
+  // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price, charger choice) are stored only when the user typed them.
+  var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"}, TRANSIENT = {sel:1};
+  var S = JSON.parse(JSON.stringify(DEFAULT));
+  try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
+  if(!S.ov || typeof S.ov !== "object"){ S.ov = {}; }
+  Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
+  S.sel = null;
   S.hold = Math.min(60, Math.max(0, +S.hold));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
@@ -200,7 +203,16 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
   function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+  function save(){
+    try{
+      var d = {};
+      Object.keys(DEFAULT).forEach(function(k){
+        if(TRANSIENT[k] || (AUTO[k] && !S[AUTO[k]])){ return; }
+        if(JSON.stringify(S[k]) !== JSON.stringify(DEFAULT[k])){ d[k] = S[k]; }
+      });
+      if(Object.keys(d).length){ localStorage.setItem(KEY, JSON.stringify(d)); } else { localStorage.removeItem(KEY); }
+    }catch(e){}
+  }
   function num(v, fb){ var x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : fb; }
   function fmt(x, d){ return x.toFixed(d === undefined ? 2 : d); }
   function sek(x){ return (x > 0 ? "+" : "") + fmt(x, 2) + " SEK"; }
@@ -333,7 +345,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         '<label class="name" for="pp' + i + '">' + esc(p.name) + '</label><b>' + fmt(p.price) + '</b>' +
         '<span class="meta">' + fmt(p.dist, 1) + ' km · ' + (p.date ? "as of " + p.date : "date unknown") + '</span>';
       w.appendChild(d);
-      d.querySelector("input").addEventListener("change", function(){ N.pick = i; S.petrol = p.price; save(); syncInputs(); update(); });
+      d.querySelector("input").addEventListener("change", function(){ N.pick = i; S.petrol = p.price; S.petrolEdited = false; save(); syncInputs(); update(); });
     });
   }
 
@@ -383,7 +395,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         });
         N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5);
         N.pick = -1; N.pe.forEach(function(p, i){ if(N.pick < 0 || p.price < N.pe[N.pick].price){ N.pick = i; } });
-        if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; }
+        if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; S.petrolEdited = false; }
         save();
         msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the cheapest charger with a known price are preselected; change them below.";
         renderStations(); renderPetrols(); syncInputs(); update();
@@ -451,7 +463,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     notes();
   }
 
-  $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); N.pick = -1; save(); update(); });
+  $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); S.petrolEdited = true; N.pick = -1; save(); update(); });
   $("home").addEventListener("input", function(e){ S.home = num(e.target.value, S.home); S.homeEdited = true; save(); update(); });
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
