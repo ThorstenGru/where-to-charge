@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Where to charge today?</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#17803d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Where to charge">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap">
 <style>
 :root{
@@ -126,6 +132,13 @@ th{font-weight:600;color:var(--muted);border-top:0}
   </section>
 
   <section class="card">
+    <h2>Trip (optional)</h2>
+    <label class="l" for="trip">Round-trip distance (km), 0 = off</label>
+    <input id="trip" type="text" inputmode="decimal" autocomplete="off">
+    <p id="tripout" class="small" style="margin:8px 0 0;color:var(--ink)"></p>
+  </section>
+
+  <section class="card">
     <h2>Here I am</h2>
     <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
     <p id="locmsg" class="small" style="margin:8px 0 0"></p>
@@ -187,7 +200,8 @@ th{font-weight:600;color:var(--muted);border-top:0}
     opts.push({id:"home", name:"Home", price:S.home, kwh:free, remote:false});
     N.ch.forEach(function(c){
       if(!S.off[c.id] && c.price > 0){
-        opts.push({id:c.id, name:c.name, price:c.price, kwh:Math.min(free, S.hours*Math.min(S.kw, c.kw || S.kw)), remote:true});
+        var pw = Math.min(S.kw, c.kw || S.kw);
+        opts.push({id:c.id, name:c.name, price:c.price, pw:pw, kwh:Math.min(free, S.hours*pw), remote:true});
       }
     });
     opts.forEach(function(o){
@@ -225,6 +239,23 @@ th{font-weight:600;color:var(--muted);border-top:0}
     }
     el.className = "verdict " + cls;
     el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + l2 + '</p>' : '');
+  }
+
+  // Trip: electric km = battery now + charge on site (best ticked charger, capped at one full battery, assumed to happen mid-trip).
+  function renderTrip(c){
+    var o = $("tripout"), km = S.trip || 0;
+    if(km <= 0){ o.textContent = "Enter the round-trip distance to see if it works fully electric."; return; }
+    var per = 100 / c.se.el, batt = USABLE_KWH * S.soc / 100;
+    var r = c.opts.filter(function(x){ return x.remote; })[0];
+    var add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
+    var kmBatt = batt * per, kmAll = (batt + add) * per;
+    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Tick a charger to add charging on site.");
+    if(kmAll >= km){ t += " Fully electric: yes (" + fmt(km, 0) + " km trip)."; }
+    else {
+      var l = (km - kmAll) * c.se.l / 100;
+      t += " Fully electric: no. About " + fmt(km - kmAll, 0) + " km on petrol = " + fmt(l, 1) + " l = " + fmt(l * S.petrol) + " SEK.";
+    }
+    o.textContent = t;
   }
 
   function renderTable(c){
@@ -338,6 +369,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
     $("home").value = fmt(S.home);
     $("hours").value = fmt(S.hours, 1);
     $("kw").value = fmt(S.kw, 1);
+    $("trip").value = fmt(S.trip || 0, 0);
     $("soc").value = S.soc;
     $("socv").textContent = S.soc + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
@@ -349,12 +381,14 @@ th{font-weight:600;color:var(--muted);border-top:0}
     renderVerdict(c);
     renderTable(c);
     renderMeta(c);
+    renderTrip(c);
   }
 
   $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); save(); update(); });
   $("home").addEventListener("input", function(e){ S.home = num(e.target.value, S.home); save(); update(); });
   $("hours").addEventListener("input", function(e){ S.hours = Math.max(0, num(e.target.value, S.hours)); save(); update(); });
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
+  $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); $("socv").textContent = S.soc + " %"; save(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); syncInputs(); update(); });
   $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); syncInputs(); update(); });

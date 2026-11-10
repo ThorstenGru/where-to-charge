@@ -53,11 +53,14 @@ Decision: the best gain per kWh wins. Below 0.30 SEK/kWh, or with an almost full
 6. Petrol prices come from a crowd source and ANWB. Many have no timestamp (shown as "date unknown").
 7. Only chargers up to 22 kW are listed, and many have no operator name, so no price.
 
+## Done since first handover
+- Trip mode: enter round-trip km. Electric km = (battery now + charge on site) x 100 / kWh per 100 km. Charge on site = best ticked charger, parking hours x min(car kW, charger kW), capped at one full battery (assumes the charge happens mid-trip). Shows fully electric yes/no, otherwise petrol km, litres and SEK.
+- PWA basics: `manifest.json`, icons (192, 512, apple-touch), standalone display. No service worker, because the page needs live data anyway.
+
 ## Ideas for next steps
-- Route mode: round trip (enter km), "fully electric possible?" including charging on site (winter about 44 km, summer about 69 km round trip with 1 h of charging).
 - Annual calculation by mileage, split summer/winter.
 - Automatic season preset by date.
-- PWA basics (manifest, home screen icon).
+- Real routing instead of straight-line distances.
 
 ## Constraints
 - One file, no external dependencies except the optional font (Google Fonts, with system fallback).
