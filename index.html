@@ -117,7 +117,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <div class="gap"></div>
     <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
     <input id="soc" type="range" min="0" max="100" step="5">
-    <p class="hint">The 13.8 kWh battery is never fully used: the car keeps a reserve at the bottom and a buffer at the top. 0 % on the car's display means "empty, hybrid mode takes over", 100 % means "full". Only the usable part (about 10.4 kWh from the socket, 54 km WLTP) can be recharged, and that is what this tool counts.</p>
+    <p class="hint">The car never runs the battery fully empty: in hybrid mode it holds a reserve. Only the charge between that hold level and 100 % (about 10.4 kWh from the socket, 54 km WLTP) can be recharged, and that is what this tool counts.</p>
+    <div class="row" style="margin-top:8px">
+      <div class="field">
+        <label class="l" for="hold">Level the car holds in hybrid mode (% on the display)</label>
+        <input id="hold" type="text" inputmode="decimal" autocomplete="off">
+      </div>
+    </div>
+    <p class="hint">Read it from the display the next time the car runs in hybrid mode and enter it here. 0 = not set yet.</p>
 
     <div class="gap"></div>
     <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
@@ -174,10 +181,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     winter:{el:25, l:8.3, km:30, note:"Winter (about -5 to +5 °C): heating and cold battery raise electric consumption to 25 kWh/100 km (about 30 km range) and petrol use to 8.3 l/100 km."},
     summer:{el:19, l:7.0, km:50, note:"Summer: mild weather, 19 kWh/100 km electric (about 50 km range) and 7.0 l/100 km petrol."}
   };
-  var DEFAULT = {petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
+  var DEFAULT = {hold:0, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
   var S;
   try{ var raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
   if(!S || !S.ov){ S = JSON.parse(JSON.stringify(DEFAULT)); }
+  S.hold = Math.min(60, Math.max(0, +S.hold || 0));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
   var BASE = "https://eurofuelprices.com/";
@@ -202,7 +210,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var se = SEASONS[S.season];
     var lPerKwh = se.l / se.el, per = 100 / se.el;
     var value = lPerKwh * S.petrol;
-    var free = Math.max(0, USABLE_KWH * (1 - S.soc/100));
+    var free = USABLE_KWH * (100 - Math.max(S.soc, S.hold)) / (100 - S.hold);   // chargeable kWh: the 10.4 kWh span the display range hold..100 %
     var opts = [{id:"home", name:"Home", price:S.home, kwh:free, pw:0, remote:false}];
     var c = selCharger();
     if(c){
@@ -269,7 +277,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function renderTrip(c){
     var o = $("tripout"), km = S.trip || 0;
     if(km <= 0){ o.textContent = "Enter the round-trip distance to see if it works fully electric."; return; }
-    var batt = USABLE_KWH * S.soc / 100;
+    var batt = USABLE_KWH * (Math.max(S.soc, S.hold) - S.hold) / (100 - S.hold);
     var r = c.opts.filter(function(x){ return x.remote; })[0];
     var add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
     var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
@@ -410,7 +418,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     $("kw").value = fmt(S.kw, 1);
     $("hours").value = S.hours; $("hoursv").textContent = fmt(S.hours, 1) + " h";
     $("trip").value = fmt(S.trip || 0, 0);
-    $("soc").value = S.soc; $("socv").textContent = S.soc + " %";
+    $("hold").value = fmt(S.hold, 0);
+    $("soc").min = S.hold; $("soc").value = Math.max(S.soc, S.hold);
+    $("soc").value = Math.max(S.soc, S.hold); $("socv").textContent = S.soc + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.season === "summer");
     notes();
@@ -420,7 +430,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function notes(){
     var se = SEASONS[S.season], c = selCharger();
     $("hoursv").textContent = fmt(S.hours, 1) + " h";
-    $("socv").textContent = S.soc + " %";
+    $("socv").textContent = Math.max(S.soc, S.hold) + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.season === "summer");
     $("seasonnote").textContent = se.note;
@@ -444,6 +454,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
+  $("hold").addEventListener("input", function(e){ S.hold = Math.min(60, Math.max(0, num(e.target.value, 0))); $("soc").min = S.hold; save(); update(); });
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
   $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); update(); });
