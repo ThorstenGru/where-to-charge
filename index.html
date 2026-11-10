@@ -75,6 +75,12 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .pos{color:var(--remote)} .neg{color:var(--neg)}
 .small{font-size:13px;color:var(--muted)}
 .hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+.tiles{display:flex;gap:8px;margin:6px 0 12px}
+.tile{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.tile .cap{font-size:12px;color:var(--muted)}
+.tile .big{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.tile .unit{font-size:13px;color:var(--muted)}
+.tile .st{font-size:13px;font-weight:700;margin-top:4px}
 .cmp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .cmp.best{border:2px solid var(--remote)}
 .cmp h3{font-size:15px;margin:0 0 4px;display:flex;justify-content:space-between;gap:8px}
@@ -88,6 +94,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   <h1>Where to charge today?</h1>
 
   <section id="verdict" class="verdict home" aria-live="polite"></section>
+
+  <section class="card">
+    <h2>Break-even: where charging and petrol cost the same</h2>
+    <div id="be"></div>
+    <p class="hint">Left: charging stops paying when petrol gets cheaper than this. Right: petrol becomes the cheaper choice when electricity gets more expensive than this. Both are the same tipping point, once in petrol terms, once in electricity terms.</p>
+  </section>
 
   <section class="card">
     <h2>Today</h2>
@@ -267,6 +279,19 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     }
     el.className = "verdict " + cls;
     el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
+  }
+
+  function renderBreak(c){
+    var h = "";
+    c.opts.forEach(function(o){
+      var mp = S.petrol - o.be, me = c.value - o.price, okP = mp >= 0, okE = me >= 0;
+      h += '<h3 style="font-size:14px;margin:8px 0 0">' + esc(o.remote ? o.name : "Home") + '</h3><div class="tiles">' +
+        '<div class="tile"><div class="cap">Petrol break-even</div><div class="big">' + fmt(o.be) + '</div><div class="unit">SEK/l · today ' + fmt(S.petrol) + '</div>' +
+        '<div class="st ' + (okP ? "pos" : "neg") + '">' + (okP ? "Charging wins: petrol is " + fmt(mp) + " above" : "Petrol wins: petrol is " + fmt(-mp) + " below") + '</div></div>' +
+        '<div class="tile"><div class="cap">Electricity break-even</div><div class="big">' + fmt(c.value) + '</div><div class="unit">SEK/kWh · today ' + fmt(o.price) + '</div>' +
+        '<div class="st ' + (okE ? "pos" : "neg") + '">' + (okE ? "Charging wins: electricity is " + fmt(me) + " below" : "Petrol wins: electricity is " + fmt(-me) + " above") + '</div></div></div>';
+    });
+    $("be").innerHTML = h;
   }
 
   function renderCompare(c){
@@ -456,6 +481,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function update(){
     var c = calc();
     renderVerdict(c);
+    renderBreak(c);
     renderCompare(c);
     renderMeta(c);
     renderTrip(c);
