@@ -273,17 +273,19 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       cls = "hev"; big = "Drive in HEV mode"; act = best.net > 0 ? "Do not bother plugging in. The saving is too small." : "Do not plug in. Petrol is cheaper today.";
       l1 = best.net > 0 ? "The best option saves only " + fmt(best.net) + " SEK per kWh, below the 0.30 SEK/kWh needed to make it worth the effort." : "Charging costs more than petrol per km today.";
     } else if(best.remote){
-      cls = "remote"; big = "Charge on the road"; act = "Plug in at " + best.name + " (" + fmt(S.hours, 1) + " h).";
+      cls = "remote";
+      var rest = c.free - best.kwh, both = rest > 0.5 && h.net > 0;
+      big = both ? "Top up on the road, then charge the rest at home" : "Charge on the road";
+      act = "Plug in at " + best.name + " (" + fmt(S.hours, 1) + " h)" + (both ? ", then charge the rest at home." : ".");
       l1 = best.name + " at " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh in " + fmt(S.hours, 1) + " h, " + sek(best.total) + " versus petrol.";
-      var rest = c.free - best.kwh;
-      if(rest > 0.5 && h.net > 0){ l2 = "Top up the rest (" + fmt(rest, 1) + " kWh) at home: " + sek(h.net * rest) + "."; }
+      if(both){ l2 = "At home: the remaining " + fmt(rest, 1) + " kWh at " + fmt(h.price) + " SEK/kWh, " + sek(h.net * rest) + " versus petrol."; }
     } else {
       cls = "home"; big = "Charge at home"; act = "Plug in when you get home.";
       l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
       l2 = c.opts.length === 1 ? "Tap \"Find my location\" below and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
     }
     el.className = "verdict " + cls;
-    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big">' + big + '</p><p class="act">' + esc(act) + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
+    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big" style="font-size:' + (big.length > 24 ? 30 : 40) + 'px">' + big + '</p><p class="act">' + esc(act) + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
   }
 
   function renderBreak(c){
