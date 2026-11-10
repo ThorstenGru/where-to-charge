@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Wo laden heute?</title>
+<title>Where to charge today?</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap">
 <style>
 :root{
@@ -61,7 +61,7 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{flex:1;font:inherit;padding:10px;background:var(--bg);color:var(--ink);border:0;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:700}
-.chips{display:flex;gap:8px;margin-top:8px}
+.chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
   background:var(--bg);color:var(--ink);cursor:pointer}
 .opt{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;
@@ -73,7 +73,6 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .opt .price{width:84px;text-align:right}
 .net{font-weight:700;white-space:nowrap}
 .pos{color:var(--remote)} .neg{color:var(--neg)}
-.best{background:color-mix(in srgb,var(--remote) 10%,transparent);border-radius:10px;padding-left:8px;padding-right:8px}
 .small{font-size:13px;color:var(--muted)}
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px}
@@ -84,68 +83,68 @@ th{font-weight:600;color:var(--muted);border-top:0}
 </head>
 <body>
 <main>
-  <h1>Wo laden heute?</h1>
+  <h1>Where to charge today?</h1>
 
   <section id="verdict" class="verdict home" aria-live="polite"></section>
 
   <section class="card">
-    <h2>Heute</h2>
+    <h2>Today</h2>
     <div class="row">
       <div class="field">
-        <label class="l" for="petrol">Benzin (SEK/l)</label>
+        <label class="l" for="petrol">Petrol (SEK/l)</label>
         <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
       </div>
       <div class="field">
-        <label class="l" for="home">Strom zuhause (SEK/kWh)</label>
+        <label class="l" for="home">Home electricity (SEK/kWh)</label>
         <input id="home" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
     <div class="chips">
-      <button class="chip" data-petrol="18.80">Ab 1. Dez. 18,80</button>
+      <button class="chip" data-petrol="18.80">From 1 Dec: 18.80</button>
       <button class="chip" id="homechip" hidden></button>
     </div>
     <div style="height:12px"></div>
-    <label class="l">Jahreszeit</label>
-    <div class="seg" role="group" aria-label="Jahreszeit">
+    <label class="l">Season</label>
+    <div class="seg" role="group" aria-label="Season">
       <button id="sWinter" aria-pressed="true">Winter</button>
-      <button id="sSummer" aria-pressed="false">Sommer</button>
+      <button id="sSummer" aria-pressed="false">Summer</button>
     </div>
     <div style="height:12px"></div>
-    <label class="l" for="soc">Akku-Stand: <b id="socv"></b></label>
+    <label class="l" for="soc">Battery level: <b id="socv"></b></label>
     <input id="soc" type="range" min="0" max="100" step="5">
     <div style="height:8px"></div>
     <div class="row">
       <div class="field">
-        <label class="l" for="hours">Standzeit unterwegs (h)</label>
+        <label class="l" for="hours">Time parked on the road (h)</label>
         <input id="hours" type="text" inputmode="decimal" autocomplete="off">
       </div>
       <div class="field">
-        <label class="l" for="kw">Ladeleistung (kW)</label>
+        <label class="l" for="kw">Charging power (kW)</label>
         <input id="kw" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
   </section>
 
   <section class="card">
-    <h2>Hier bin ich</h2>
-    <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Standort bestimmen</button>
+    <h2>Here I am</h2>
+    <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
     <p id="locmsg" class="small" style="margin:8px 0 0"></p>
-    <h2 style="margin:14px 0 6px">Benzin 95 in der Nähe</h2>
-    <div id="petrols" class="small">Nach „Hier bin ich“ erscheinen die 5 nächsten Tankstellen. Wähle eine, dann gilt ihr Preis.</div>
-    <h2 style="margin:14px 0 6px">Nächste 5 Ladesäulen (Typ 2, AC)</h2>
-    <div id="stations" class="small">Nach „Hier bin ich“ erscheinen die 5 nächsten Säulen.</div>
-    <p class="small" style="margin:8px 0 0">Haken = ich komme vorbei. Zuhause ist immer Vergleichsoption. Ohne Preis wird eine Säule nicht gewertet, trag den Preis aus der App ein. Daten: eurofuelprices.com (Open Charge Map, NOBIL, Betreiber-Listenpreise).</p>
+    <h2 style="margin:14px 0 6px">Petrol 95 nearby</h2>
+    <div id="petrols" class="small">After "Here I am" the 5 nearest petrol stations appear. Pick one and its price is used.</div>
+    <h2 style="margin:14px 0 6px">Nearest 5 chargers (Type 2, AC)</h2>
+    <div id="stations" class="small">After "Here I am" the 5 nearest chargers appear.</div>
+    <p class="small" style="margin:8px 0 0">Tick = I will pass by. Home is always a comparison option. A charger without a price is not counted, so enter the price from its app. Data: eurofuelprices.com (Open Charge Map, NOBIL, operator list prices).</p>
   </section>
 
   <section class="card">
-    <h2>Vergleich</h2>
+    <h2>Comparison</h2>
     <div class="tablewrap"><table id="cmp"></table></div>
     <p id="rate" class="small" style="margin:10px 0 0"></p>
   </section>
 
   <section class="card">
-    <h2>Annahmen</h2>
-    <p class="small" style="margin:0">Santa Fe PHEV, nutzbare Ladung ca. 10,4 kWh aus der Steckdose (54 km WLTP). Sommer: 19 kWh/100 km elektrisch, 7,0 l/100 km Benzin. Winter: 25 kWh/100 km elektrisch, 8,3 l/100 km Benzin. Gewinn = gesparter Benzinpreis minus Strompreis pro kWh. Heimstrom ist dein Monatsmittel-Vertrag, die Uhrzeit spielt keine Rolle. Reichweite und Winterverbrauch sind Schätzungen. Parkgebühren und Umwege sind nicht eingerechnet.</p>
+    <h2>Assumptions</h2>
+    <p class="small" style="margin:0">Santa Fe PHEV, usable charge about 10.4 kWh from the socket (54 km WLTP). Summer: 19 kWh/100 km electric, 7.0 l/100 km petrol. Winter: 25 kWh/100 km electric, 8.3 l/100 km petrol. Gain = petrol price saved minus electricity price per kWh. Home electricity is a monthly-average contract, so the time of day does not matter. Range and winter consumption are estimates. Parking fees and detours are not included.</p>
   </section>
 </main>
 
@@ -159,24 +158,23 @@ th{font-weight:600;color:var(--muted);border-top:0}
   };
   var DEFAULT = {
     petrol:15.80, home:4.59, season:"winter", soc:20, hours:1, kw:3.6,
-    ov:{}, off:{}   // ov: eigene Säulenpreise je Säulen-ID, off: abgewählte Säulen
+    ov:{}, off:{}   // ov: own charger prices by charger id, off: deselected chargers
   };
   var S;
   try{ var raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : null; }catch(e){ S = null; }
   if(!S || !S.ov){ S = JSON.parse(JSON.stringify(DEFAULT)); }
 
   var BASE = "https://eurofuelprices.com/";
-  // Heimstrom laut Rechnungen Okt. 2026: (Spot + rörliga 0,11497 + Nät 0,2584 + Energieskatt 0,36) * 1,25. Påslag 0,06 und Rabatt 0,06 heben sich bis 2027-05-31 auf.
+  // Home electricity per the Oct 2026 invoices: (spot + variable 0.11497 + grid transfer 0.2584 + energy tax 0.36) * 1.25. The 0.06 markup and 0.06 discount cancel until 2027-05-31.
   var HOME_ADD = 0.73337;
   var N = {ch:[], pe:[], pick:-1};
-  var D = null;   // geladene Daten
   function hav(a,b,c,d){ var r=Math.PI/180, x=(c-a)*r, y=(d-b)*r, q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2); return 12742*Math.asin(Math.sqrt(q)); }
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
   function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
 
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
   function num(v, fb){ var x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : fb; }
-  function fmt(x, d){ return x.toFixed(d === undefined ? 2 : d).replace(".", ","); }
+  function fmt(x, d){ return x.toFixed(d === undefined ? 2 : d); }
   function sek(x){ return (x > 0 ? "+" : "") + fmt(x, 2) + " SEK"; }
   var $ = function(id){ return document.getElementById(id); };
 
@@ -186,7 +184,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
     var value = lPerKwh * S.petrol;
     var free = Math.max(0, USABLE_KWH * (1 - S.soc/100));
     var opts = [];
-    opts.push({id:"home", name:"Zuhause", price:S.home, kwh:free, remote:false});
+    opts.push({id:"home", name:"Home", price:S.home, kwh:free, remote:false});
     N.ch.forEach(function(c){
       if(!S.off[c.id] && c.price > 0){
         opts.push({id:c.id, name:c.name, price:c.price, kwh:Math.min(free, S.hours*Math.min(S.kw, c.kw || S.kw)), remote:true});
@@ -207,41 +205,43 @@ th{font-weight:600;color:var(--muted);border-top:0}
     var home = c.opts.filter(function(o){ return o.id === "home"; })[0];
     var cls, big, l1, l2 = "";
     if(c.free < 0.5){
-      cls = "hev"; big = "Nicht laden";
-      l1 = "Der Akku ist praktisch voll. Fahr im Hybridmodus.";
+      cls = "hev"; big = "Do not charge";
+      l1 = "The battery is practically full. Drive in hybrid mode.";
     } else if(best.net < 0.3){
-      cls = "hev"; big = "HEV fahren";
-      l1 = "Jede Ladeoption bringt unter 0,30 SEK pro kWh. Es lohnt sich nicht, dafür etwas zu planen.";
+      cls = "hev"; big = "Drive in HEV mode";
+      l1 = "Every charging option saves less than 0.30 SEK per kWh. It is not worth planning for.";
     } else if(best.remote){
-      cls = "remote"; big = "Remote laden";
-      l1 = best.name + " zu " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh, " + sek(best.total) + " gegenüber Benzin.";
+      cls = "remote"; big = "Charge on the road";
+      l1 = best.name + " at " + fmt(best.price) + " SEK/kWh: " + fmt(best.kwh, 1) + " kWh, " + sek(best.total) + " versus petrol.";
       var rest = c.free - best.kwh;
       if(rest > 0.5 && home.net > 0){
-        l2 = "Den Rest (" + fmt(rest, 1) + " kWh) kannst du zuhause nachladen: " + sek(home.net * rest) + ".";
+        l2 = "You can top up the rest (" + fmt(rest, 1) + " kWh) at home: " + sek(home.net * rest) + ".";
       }
     } else {
-      cls = "home"; big = "Zuhause laden";
-      l1 = fmt(best.kwh, 1) + " kWh zu " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " gegenüber Benzin.";
-      if(c.opts.length === 1){ l2 = "Tippe unten „Hier bin ich“ und trag bei einer Säule den Preis aus der App ein."; }
-      else { l2 = "Die gewählten Säulen sind teurer als zuhause."; }
+      cls = "home"; big = "Charge at home";
+      l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
+      if(c.opts.length === 1){ l2 = "Tap \"Here I am\" below and enter a price for a charger from its app."; }
+      else { l2 = "The selected chargers are more expensive than home."; }
     }
     el.className = "verdict " + cls;
-    el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + l1 + '</p>' + (l2 ? '<p class="sub">' + l2 + '</p>' : '');
+    el.innerHTML = '<p class="big">' + big + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + l2 + '</p>' : '');
   }
 
   function renderTable(c){
-    var h = '<tr><th>Option</th><th>SEK/kWh</th><th>Gewinn/kWh</th><th>Gesamt</th><th>Benzin ab</th></tr>';
+    var h = '<tr><th>Option</th><th>SEK/kWh</th><th>Gain/kWh</th><th>Total</th><th>Petrol from</th></tr>';
     c.opts.forEach(function(o, i){
-      h += '<tr><td>' + (i === 0 ? "<b>" + o.name + "</b>" : o.name) + '</td><td>' + fmt(o.price) + '</td><td class="' + (o.net >= 0 ? "pos" : "neg") + '">' + fmt(o.net) + '</td><td class="' + (o.total >= 0 ? "pos" : "neg") + '">' + fmt(o.total) + '</td><td>' + fmt(o.be) + '</td></tr>';
+      var n = esc(o.name);
+      h += '<tr><td>' + (i === 0 ? "<b>" + n + "</b>" : n) + '</td><td>' + fmt(o.price) + '</td><td class="' + (o.net >= 0 ? "pos" : "neg") + '">' + fmt(o.net) + '</td><td class="' + (o.total >= 0 ? "pos" : "neg") + '">' + fmt(o.total) + '</td><td>' + fmt(o.be) + '</td></tr>';
     });
     $("cmp").innerHTML = h;
-    $("rate").textContent = "1 kWh ersetzt " + fmt(c.lPerKwh, 2) + " l Benzin und bringt " + fmt(100 / c.se.el, 1) + " km elektrisch, das sind " + fmt(c.value) + " SEK bei " + fmt(S.petrol) + " SEK/l. Spalte „Benzin ab“: ab diesem Benzinpreis (SEK/l) lohnt sich die Option.";
+    $("rate").textContent = "1 kWh replaces " + fmt(c.lPerKwh, 2) + " l of petrol and gives " + fmt(100 / c.se.el, 1) + " km electric, which is worth " + fmt(c.value) + " SEK at " + fmt(S.petrol) + " SEK/l. Column \"Petrol from\": the option pays off from this petrol price (SEK/l).";
   }
 
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
   function renderStations(){
     var wrap = $("stations");
+    wrap.className = "";
     wrap.innerHTML = "";
     N.ch.forEach(function(c){
       var d = document.createElement("div");
@@ -249,12 +249,12 @@ th{font-weight:600;color:var(--muted);border-top:0}
       d.innerHTML =
         '<input type="checkbox" id="c' + c.id + '" ' + (S.off[c.id] ? "" : "checked") + ' aria-label="' + esc(c.name) + '">' +
         '<label class="name" for="c' + c.id + '">' + esc(c.name) + '</label>' +
-        '<input class="price" type="text" inputmode="decimal" id="p' + c.id + '" value="' + (c.price > 0 ? fmt(c.price) : "") + '" placeholder="SEK/kWh" aria-label="Preis ' + esc(c.name) + '">' +
+        '<input class="price" type="text" inputmode="decimal" id="p' + c.id + '" value="' + (c.price > 0 ? fmt(c.price) : "") + '" placeholder="SEK/kWh" aria-label="Price ' + esc(c.name) + '">' +
         '<span class="meta" id="m' + c.id + '"></span>';
       wrap.appendChild(d);
       d.querySelector("#c" + c.id).addEventListener("change", function(e){ if(e.target.checked){ delete S.off[c.id]; } else { S.off[c.id] = 1; } save(); update(); });
       d.querySelector("#p" + c.id).addEventListener("input", function(e){
-        var v = num(e.target.value, 0); S.ov[c.id] = v; c.price = v; c.src = "eigener Preis"; save(); update();
+        var v = num(e.target.value, 0); S.ov[c.id] = v; c.price = v; c.src = "own price"; save(); update();
       });
     });
   }
@@ -262,7 +262,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
   function renderMeta(c){
     N.ch.forEach(function(s){
       var m = $("m" + s.id); if(!m) return;
-      var h = fmt(s.dist, 1) + " km" + (s.kw ? " · " + s.kw + " kW" : "") + " · " + (s.price > 0 ? s.src : "kein Preis bekannt");
+      var h = fmt(s.dist, 1) + " km" + (s.kw ? " · " + s.kw + " kW" : "") + " · " + (s.price > 0 ? esc(s.src) : "no price known");
       if(s.price > 0){ var net = c.value - s.price; h += ' · <span class="net ' + (net >= 0 ? "pos" : "neg") + '">' + sek(net) + '/kWh</span>'; }
       m.innerHTML = h;
     });
@@ -276,7 +276,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
       var d = document.createElement("div"); d.className = "opt";
       d.innerHTML = '<input type="radio" name="pp" id="pp' + i + '" ' + (N.pick === i ? "checked" : "") + ' style="width:22px;height:22px">' +
         '<label class="name" for="pp' + i + '">' + esc(p.name) + '</label><b>' + fmt(p.price) + '</b>' +
-        '<span class="meta">' + fmt(p.dist, 1) + ' km · ' + (p.date ? "Stand " + p.date : "Stand unbekannt") + '</span>';
+        '<span class="meta">' + fmt(p.dist, 1) + ' km · ' + (p.date ? "as of " + p.date : "date unknown") + '</span>';
       w.appendChild(d);
       d.querySelector("input").addEventListener("change", function(){ N.pick = i; S.petrol = p.price; save(); syncInputs(); update(); });
     });
@@ -284,11 +284,11 @@ th{font-weight:600;color:var(--muted);border-top:0}
 
   function locate(){
     var msg = $("locmsg");
-    msg.textContent = "Standort wird bestimmt …";
-    if(!navigator.geolocation){ msg.textContent = "Dieser Browser kann den Standort nicht bestimmen."; return; }
+    msg.textContent = "Finding your location …";
+    if(!navigator.geolocation){ msg.textContent = "This browser cannot determine your location."; return; }
     navigator.geolocation.getCurrentPosition(function(pos){
       var la = pos.coords.latitude, lo = pos.coords.longitude;
-      msg.textContent = "Lade Säulen und Benzinpreise …";
+      msg.textContent = "Loading chargers and petrol prices …";
       Promise.all([getJ("ev_se.json"), getJ("ac_tariffs.json"), getJ("se.json")]).then(function(r){
         var ev = r[0], tar = {}, tdate = r[1].updated;
         (r[1].entries || []).forEach(function(e){
@@ -298,27 +298,27 @@ th{font-weight:600;color:var(--muted);border-top:0}
         });
         N.ch = ev.s.map(function(x, i){
           var op = x[2] > 0 ? ev.ops[x[2]-1] : "";
-          return {id:"s"+i, name:(op && op.charAt(0) !== "(" ? op : "Ladesäule") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op), dist:hav(la, lo, x[0], x[1])};
+          return {id:"s"+i, name:(op && op.charAt(0) !== "(" ? op : "Charger") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op), dist:hav(la, lo, x[0], x[1])};
         }).filter(function(c){ return c.kw <= 22; })
           .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5)
           .map(function(c){
-            if(S.ov[c.id] > 0){ c.price = S.ov[c.id]; c.src = "eigener Preis"; }
-            else if(c.free){ c.price = 0.01; c.src = "gratis laut Quelle"; }
-            else if(tar[c.key]){ c.price = tar[c.key]; c.src = "Listenpreis ohne Abo, Stand " + tdate; }
+            if(S.ov[c.id] > 0){ c.price = S.ov[c.id]; c.src = "own price"; }
+            else if(c.free){ c.price = 0.01; c.src = "free according to source"; }
+            else if(tar[c.key]){ c.price = tar[c.key]; c.src = "list price without subscription, as of " + tdate; }
             return c;
           });
         var pe = [];
         r[2].stations.forEach(function(s){
           var p = (s.prices || []).filter(function(q){ return q.octane === 95 && q.price > 12 && q.price < 25; })[0];
-          if(p){ pe.push({name:(s.brand || s.name || "Tankstelle") + (s.city ? ", " + s.city : ""), price:p.price, date:p.updated_at ? p.updated_at.slice(0,10) : "", dist:hav(la, lo, s.lat, s.lon)}); }
+          if(p){ pe.push({name:(s.brand || s.name || "Petrol station") + (s.city ? ", " + s.city : ""), price:p.price, date:p.updated_at ? p.updated_at.slice(0,10) : "", dist:hav(la, lo, s.lat, s.lon)}); }
         });
         N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5);
         N.pick = -1; N.pe.forEach(function(p, i){ if(N.pick < 0 || p.price < N.pe[N.pick].price){ N.pick = i; } });
         if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; save(); }
-        msg.textContent = "Standort gefunden (Genauigkeit ca. " + Math.round(pos.coords.accuracy) + " m). Günstigstes Benzin ist vorgewählt.";
+        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest petrol is preselected.";
         renderStations(); renderPetrols(); syncInputs(); update();
-      }).catch(function(){ msg.textContent = "Daten von eurofuelprices.com konnten nicht geladen werden."; });
-    }, function(){ msg.textContent = "Kein Standort. Erlaube den Zugriff im Browser und versuche es erneut."; }, {timeout:15000});
+      }).catch(function(){ msg.textContent = "Could not load data from eurofuelprices.com."; });
+    }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
   }
 
   function loadSpot(){
@@ -327,7 +327,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
       while(i >= 0 && m[i] == null){ i--; }
       if(i < 0){ return; }
       var h = (m[i] + HOME_ADD) * 1.25, b = $("homechip");
-      b.textContent = "Heimpreis aus Spot " + ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"][i] + " (" + fmt(m[i]) + "): " + fmt(h);
+      b.textContent = "Home price from " + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i] + " spot (" + fmt(m[i]) + "): " + fmt(h);
       b.hidden = false;
       b.onclick = function(){ S.home = Math.round(h * 100) / 100; save(); syncInputs(); update(); };
     }).catch(function(){});
