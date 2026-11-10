@@ -107,11 +107,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <h2>Today</h2>
     <div class="row">
       <div class="field">
-        <label class="l" for="petrol">Petrol 95 (SEK/l) · daily price</label>
+        <label class="l" for="petrol">Petrol 95 (SEK/l) · daily price, loaded automatically</label>
         <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
       </div>
       <div class="field">
-        <label class="l" for="home">Home electricity (SEK/kWh) · monthly price</label>
+        <label class="l" for="home">Home electricity (SEK/kWh) · monthly price, calculated or estimated</label>
         <input id="home" type="text" inputmode="decimal" autocomplete="off">
       </div>
     </div>
@@ -466,14 +466,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       if(!rat.length){ return; }
       var f = rat.reduce(function(s, x){ return s + x; }, 0) / rat.length;
       var list = [];
-      if(BILL.year === y && BILL.month - 1 < i){ list.push({label:MON[BILL.month-1], spot:BILL.spot, kind:"your bill"}); }
+      if(BILL.year === y && BILL.month - 1 < i){ list.push({label:MON[BILL.month-1], spot:BILL.spot, kind:"calculated from your bill"}); }
       var tc = typ(i);
       if(part && tc > 0){
         // The bill uses the whole-month average: known days + estimate for the rest of the month.
         var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
-        list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"full-month estimate (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
+        list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"estimated (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
       } else {
-        list.push({label:MON[i], spot:m[i], kind:"month average"});
+        list.push({label:MON[i], spot:m[i], kind:"calculated from spot average"});
       }
       for(k = 1; k <= 3; k++){
         var mi = (i + k) % 12, t = typ(mi);
