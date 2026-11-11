@@ -197,12 +197,13 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
   };
   function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
-  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, sel:null};
+  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, opp:{}, sel:null};
   // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price, charger choice) are stored only when the user typed them.
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"}, TRANSIENT = {sel:1};
   var S = JSON.parse(JSON.stringify(DEFAULT));
   try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
   if(!S.ov || typeof S.ov !== "object"){ S.ov = {}; }
+  if(!S.opp || typeof S.opp !== "object"){ S.opp = {}; }
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
   S.sel = null;
   S.hold = Math.min(60, Math.max(0, +S.hold));
@@ -217,7 +218,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function hav(a,b,c,d){ var r=Math.PI/180, x=(c-a)*r, y=(d-b)*r, q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2); return 12742*Math.asin(Math.sqrt(q)); }
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
   var SEJ = null;
-  function getSE(){ return SEJ = SEJ || getJ("se.json"); }   // petrol prices, loaded once
+  function getSE(){ return SEJ = SEJ || getJ("se.json").catch(function(e){ SEJ = null; throw e; }); }   // a failed load is not cached, so "Find my location" can retry   // petrol prices, loaded once
   function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function save(){
@@ -354,7 +355,18 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       wrap.appendChild(d);
       d.querySelector("#c" + c.id).addEventListener("change", function(){ S.sel = c.id; save(); update(); });
       d.querySelector("#p" + c.id).addEventListener("input", function(e){
-        var v = num(e.target.value, 0); S.ov[c.id] = v; c.price = v; c.src = "own price"; save(); update();
+        var v = num(e.target.value, 0); S.ov[c.id] = v; c.price = v; c.src = "own price";
+        if(c.key){
+          // Remember the price per operator and offer it to this operator's other chargers that have no price yet.
+          if(v > 0){ S.opp[c.key] = v; } else { delete S.opp[c.key]; }
+          N.ch.forEach(function(o){
+            if(o !== c && o.key === c.key && !(S.ov[o.id] > 0)){
+              o.price = v > 0 ? v : undefined; o.src = v > 0 ? "your last price for " + c.op : undefined;
+              var f = $("p" + o.id); if(f){ f.value = v > 0 ? fmt(v) : ""; }
+            }
+          });
+        }
+        save(); update();
       });
     });
   }
@@ -409,12 +421,13 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         });
         N.ch = ev.s.map(function(x, i){
           var op = x[2] > 0 ? ev.ops[x[2]-1] : "";
-          return {id:"s"+i, name:(op && op.charAt(0) !== "(" ? op : "Charger") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op), dist:hav(la, lo, x[0], x[1])};
+          return {id:"s"+i, name:(op && op.charAt(0) !== "(" ? op : "Charger") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op), op:op, dist:hav(la, lo, x[0], x[1])};
         }).filter(function(c){ return c.kw <= 22; })
           .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5)
           .map(function(c){
             if(S.ov[c.id] > 0){ c.price = S.ov[c.id]; c.src = "own price"; }
             else if(c.free){ c.price = 0.01; c.src = "free according to source"; }
+            else if(S.opp[c.key] > 0){ c.price = S.opp[c.key]; c.src = "your last price for " + c.op; }
             else if(tar[c.key]){ c.price = tar[c.key]; c.src = "list price without subscription, as of " + tdate; }
             return c;
           });

@@ -60,6 +60,8 @@ Decision: the best gain per kWh wins. Below 0.30 SEK/kWh, or with an almost full
 - UI rework (2026-11-10): petrol from the chosen nearby pump (no price forecast); home price per month (last bill, current month, 3 estimated months) as pure energy price incl. VAT without fixed fees; explanations for season, battery level and charging power; parking time slider 0.5-12 h; one chosen charger (radio) sets price and power (min of car limit and charger kW); detailed per-option comparison (kWh, cost, petrol saved, result, break-even petrol price).
 - Month estimates (audited 2026-11-10): typical level of the month in 2023-25 (own mean from `monthly`, not the feed's `seasonal`, which includes 2026) raised by f = mean ratio of the last 3 months to typical; the excess fades by 30 % per month. Range = back to typical .. excess persists. The current partial month is estimated as known days + typical-plus-faded-excess for the rest. A rule of thumb, NOT a market forecast (no futures source).
 
+- Charger prices: NOBIL was tested on 2026-11-06 (see EuroFuelPrices docs/NOBIL_TEST_2026-11-06.md): it has NO price fields, and its terms forbid exposing the API to end users. So prices stay: operator list price (Mer, E.ON Drive, Recharge) or entered by hand. A price entered for one charger is remembered per operator and offered for that operator's other chargers ("your last price for <operator>"). Chargers without an operator name cannot share a price.
+
 ## Ideas for next steps
 - Annual calculation by mileage, split summer/winter.
 - Automatic season preset by date.
