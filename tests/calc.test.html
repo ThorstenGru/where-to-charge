@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>calc tests</title>
+<body style="font-family:monospace">
+<!-- Open over http (local server or the Pages URL): the iframe must be same-origin. -->
+<pre id="o">running ...</pre>
+<iframe src="../index.html" style="display:none"></iframe>
+<script>
+document.querySelector("iframe").onload = function () {
+  var calc = this.contentWindow.__calc, out = [], fail = 0;
+  function eq(name, got, want, tol) {
+    var ok = Math.abs(got - want) <= (tol || 0.01);
+    if (!ok) fail++;
+    out.push((ok ? "PASS " : "FAIL ") + name + ": got " + got + ", want " + want);
+  }
+  var st = {season: "winter", soc: 20, hold: 15, petrol: 15.74, home: 5, hours: 3, kw: 3.6};
+  var c = calc(st, {id: "x", name: "X", price: 4.5, kw: 22});
+  var road = c.opts.filter(function (o) { return o.remote; })[0];
+  var home = c.opts.filter(function (o) { return !o.remote; })[0];
+  eq("free kWh (10.4 * 80/85)", c.free, 9.788);
+  eq("road kWh (battery room is the limit)", road.kwh, 9.788);
+  eq("road total SEK", road.total, 7.10);
+  eq("home total SEK", home.total, 2.21);
+  eq("petrol break-even home", home.be, 15.06);
+  eq("electricity break-even", c.value, 5.2257);
+  eq("best option is the road charger", c.opts[0] === road ? 1 : 0, 1);
+
+  eq("soc below hold counts as hold level", calc({season: "winter", soc: 5, hold: 15, petrol: 15, home: 5, hours: 1, kw: 3.6}, null).free, 10.4);
+  eq("full battery has nothing to charge", calc({season: "winter", soc: 100, hold: 15, petrol: 15, home: 5, hours: 1, kw: 3.6}, null).free, 0);
+  var shortStay = calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 0.5, kw: 3.6}, {id: "y", name: "Y", price: 4, kw: 22});
+  eq("0.5 h at 3.6 kW is limited by time", shortStay.opts.filter(function (o) { return o.remote; })[0].kwh, 1.8);
+  var slow = calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 12, kw: 3.6}, {id: "z", name: "Z", price: 4, kw: 2.3});
+  eq("charger slower than the car sets the power", slow.opts.filter(function (o) { return o.remote; })[0].pw, 2.3);
+  var free = calc(st, {id: "f", name: "F", price: 0, kw: 22});
+  eq("free charger: gain per kWh equals the petrol value", free.opts[0].net, free.value);
+
+  document.title = fail ? "FAIL" : "PASS";
+  document.getElementById("o").textContent = (fail ? fail + " FAILED\n" : "ALL PASSED\n") + out.join("\n");
+};
+</script>

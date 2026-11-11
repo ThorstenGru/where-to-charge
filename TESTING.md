@@ -1,5 +1,7 @@
 # Phone test checklist
 
+Automated calculation tests: open `/tests/calc.test.html` over http (for example on the Pages URL). The tab title must say PASS.
+
 Page: https://thorstengru.github.io/where-to-charge/
 
 ## 1. Install and start (5 min)
@@ -8,7 +10,7 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Rotate / scroll: no horizontal scrolling, nothing cut off, dark mode readable.
 
 ## 2. Automatic data (2 min)
-- [ ] Petrol shows "daily price, loaded automatically" with today's date and a plausible price (check against a pump you know).
+- [ ] Petrol shows "daily price, loaded automatically" with a recent date and a plausible price (check against a pump you know).
 - [ ] Home electricity shows month chips: October "calculated from your bill" = 2.88, November estimated.
 - [ ] Airplane mode: the page still opens and warns about missing data instead of breaking.
 
