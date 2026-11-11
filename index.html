@@ -95,6 +95,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 <main>
   <h1>Where to charge today?</h1>
 
+  <!-- 1. Answer first -->
   <section id="verdict" class="verdict home" aria-live="polite"></section>
 
   <section class="card">
@@ -103,23 +104,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <p class="hint">Left: charging stops paying when petrol gets cheaper than this. Right: petrol becomes the cheaper choice when electricity gets more expensive than this. Both are the same tipping point, once in petrol terms, once in electricity terms.</p>
   </section>
 
+  <!-- 2. Inputs, in the order you think about them: car, where I am, petrol, road charger, home, trip -->
   <section class="card">
-    <h2>Today</h2>
-    <div class="row">
-      <div class="field">
-        <label class="l" for="petrol">Petrol 95 (SEK/l) · daily price, loaded automatically</label>
-        <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
-      </div>
-      <div class="field">
-        <label class="l" for="home">Home electricity (SEK/kWh) · monthly price, calculated or estimated</label>
-        <input id="home" type="text" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
-    <p id="petrolsrc" class="hint"></p>
-    <p class="hint">Home price = pure energy price per kWh incl. VAT, without fixed fees: (monthly spot + variable costs 0.115 + grid transfer 0.258 + energy tax 0.36) × 1.25, from your October 2026 bills. Unlike petrol (a daily price), electricity at home is billed at the average of the whole month, so the hour or day of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:</p>
-    <div id="months" class="chips"></div>
-    <p id="monthnote" class="hint"></p>
-
+    <h2>1 · My car now</h2>
+    <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
+    <input id="soc" type="range" min="0" max="100" step="5">
+    <p class="hint">Only the charge above the hybrid hold level can be recharged (about 10.4 kWh from the socket). The hold level is set under "Car settings and assumptions" at the bottom.</p>
     <div class="gap"></div>
     <label class="l">Season</label>
     <div class="seg" role="group" aria-label="Season">
@@ -127,53 +117,52 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       <button id="sSummer" aria-pressed="false">Summer</button>
     </div>
     <p id="seasonnote" class="hint"></p>
+  </section>
 
-    <div class="gap"></div>
-    <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
-    <input id="soc" type="range" min="0" max="100" step="5">
-    <p class="hint">The car never runs the battery fully empty: in hybrid mode it holds a reserve. Only the charge between that hold level and 100 % (about 10.4 kWh from the socket, 54 km WLTP) can be recharged, and that is what this tool counts.</p>
-    <div class="row" style="margin-top:8px">
-      <div class="field">
-        <label class="l" for="hold">Level the car holds in hybrid mode (% on the display)</label>
-        <input id="hold" type="text" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
-    <p class="hint">Default 15 %. Check it on the display the next time the car runs in hybrid mode and correct it here if needed.</p>
+  <section class="card">
+    <h2>2 · Where I am</h2>
+    <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
+    <p id="locmsg" class="small" style="margin:8px 0 0">Finds the nearest petrol stations and chargers for the two cards below.</p>
+  </section>
 
+  <section class="card">
+    <h2>3 · Petrol (daily price)</h2>
+    <label class="l" for="petrol">Petrol 95 (SEK/l), loaded automatically</label>
+    <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
+    <p id="petrolsrc" class="hint"></p>
+    <div id="petrols" class="small" style="margin-top:8px">After "Find my location" the 5 nearest petrol stations appear here. Pick one and its price replaces the price above.</div>
+  </section>
+
+  <section class="card">
+    <h2>4 · Charging on the road (Type 2, AC)</h2>
+    <div id="stations" class="small">After "Find my location" the 5 nearest chargers appear here. Pick the one you will use: its price and power are then used in the comparison.</div>
+    <p class="hint">A charger without a price is not counted, so enter the price from its app. Data: eurofuelprices.com (Open Charge Map, NOBIL, operator list prices).</p>
     <div class="gap"></div>
     <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
     <input id="hours" type="range" min="0.5" max="12" step="0.5">
-
-    <div class="gap"></div>
-    <div class="row">
-      <div class="field">
-        <label class="l" for="kw">Car's max AC charging power (kW)</label>
-        <input id="kw" type="text" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
     <p id="pwnote" class="hint"></p>
   </section>
 
   <section class="card">
-    <h2>Trip (optional)</h2>
+    <h2>5 · Charging at home (monthly price)</h2>
+    <label class="l" for="home">Home electricity (SEK/kWh), calculated or estimated</label>
+    <input id="home" type="text" inputmode="decimal" autocomplete="off">
+    <p class="hint">Unlike petrol, electricity at home is billed at the average of the whole month, so the day or hour of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:</p>
+    <div id="months" class="chips"></div>
+    <p id="monthnote" class="hint"></p>
+    <p class="hint">Price = pure energy price per kWh incl. VAT, without fixed fees: (monthly spot + variable costs 0.115 + grid transfer 0.258 + energy tax 0.36) × 1.25, from your October 2026 bills.</p>
+  </section>
+
+  <section class="card">
+    <h2>6 · Trip (optional)</h2>
     <label class="l" for="trip">Round-trip distance (km), 0 = off</label>
     <input id="trip" type="text" inputmode="decimal" autocomplete="off">
     <p id="tripout" class="small" style="margin:8px 0 0;color:var(--ink)"></p>
   </section>
 
+  <!-- 3. Details and settings last -->
   <section class="card">
-    <h2>Here I am</h2>
-    <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
-    <p id="locmsg" class="small" style="margin:8px 0 0"></p>
-    <h2 style="margin:14px 0 6px">Petrol 95 nearby</h2>
-    <div id="petrols" class="small">After "Find my location" the 5 nearest petrol stations appear. Pick one and its price replaces the petrol price above.</div>
-    <h2 style="margin:14px 0 6px">Nearest 5 chargers (Type 2, AC)</h2>
-    <div id="stations" class="small">After "Find my location" the 5 nearest chargers appear. Pick the one you will use: its price and power are then used in the comparison.</div>
-    <p class="small" style="margin:8px 0 0">A charger without a price is not counted, so enter the price from its app. Data: eurofuelprices.com (Open Charge Map, NOBIL, operator list prices).</p>
-  </section>
-
-  <section class="card">
-    <h2>Comparison</h2>
+    <h2>Comparison in detail</h2>
     <div id="cmp"></div>
     <details>
       <summary>How the numbers are calculated</summary>
@@ -182,8 +171,19 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   </section>
 
   <section class="card">
-    <h2>Assumptions</h2>
-    <p class="small" style="margin:0">Santa Fe PHEV 2025: battery 13.8 kWh gross, usable about 10.4 kWh from the socket (54 km WLTP). Charging is AC only. Winter and summer consumption, and the home-price forecast, are estimates (see the notes above). Parking fees, idle fees and detours are not included.</p>
+    <details>
+      <summary>Car settings and assumptions</summary>
+      <div class="gap"></div>
+      <label class="l" for="hold">Level the car holds in hybrid mode (% on the display)</label>
+      <input id="hold" type="text" inputmode="decimal" autocomplete="off">
+      <p class="hint">Default 15 %. Check it on the display the next time the car runs in hybrid mode and correct it here if needed. The car never runs the battery fully empty: only the charge between this level and 100 % is counted.</p>
+      <div class="gap"></div>
+      <label class="l" for="kw">Car's max AC charging power (kW)</label>
+      <input id="kw" type="text" inputmode="decimal" autocomplete="off">
+      <p class="hint">Charging power used is the lower of this and the chosen charger's power.</p>
+      <div class="gap"></div>
+      <p class="small" style="margin:0">Santa Fe PHEV 2025: battery 13.8 kWh gross, usable about 10.4 kWh from the socket (54 km WLTP). Charging is AC only. Winter and summer consumption and the home-price forecast are estimates (see the notes above). Parking fees, idle fees and detours are not included.</p>
+    </details>
   </section>
 </main>
 
@@ -282,7 +282,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     } else {
       cls = "home"; big = "Charge at home"; act = "Plug in when you get home.";
       l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
-      l2 = c.opts.length === 1 ? "Tap \"Find my location\" below and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
+      l2 = c.opts.length === 1 ? "Tap \"Find my location\" (step 2) and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
     }
     el.className = "verdict " + cls;
     el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big" style="font-size:' + (big.length > 24 ? 30 : 40) + 'px">' + big + '</p><p class="act">' + esc(act) + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
@@ -328,7 +328,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var r = ch && {name:ch.name, pw:Math.min(S.kw, ch.kw || S.kw)};
     var add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
     var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
-    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger below to add charging on site.");
+    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger (step 4) to add charging on site.");
     if(kmAll >= km){ t += " Fully electric: yes (" + fmt(km, 0) + " km trip)."; }
     else {
       var l = (km - kmAll) * c.se.l / 100;
@@ -510,7 +510,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     $("seasonnote").textContent = seasonNote(se);
     var p = N.pe[N.pick];
     $("petrolsrc").textContent = !p && N.med && !S.petrolEdited ? "Daily price, loaded automatically: national median of " + N.med.n + " Swedish prices" + (N.med.date ? ", as of " + N.med.date : "") + ". Tap \"Find my location\" to use a pump near you." : p && Math.abs(p.price - S.petrol) < 0.005 ? "Petrol price from " + p.name + ", " + fmt(p.dist, 1) + " km away" + (p.date ? ", as of " + p.date : ", date unknown") + ". No forecast: today's pump price only." : "Hand-entered or default petrol price. Tap \"Find my location\" to use a pump near you. No forecast: today's price only.";
-    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick below.";
+    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick above.";
   }
 
   function update(){
