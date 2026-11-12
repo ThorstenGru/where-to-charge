@@ -19,7 +19,7 @@ Live data from eurofuelprices.com (open CORS), no personal data is sent:
 - `ac_tariffs.json`: hand-kept operator list prices (only Mer, E.ON Drive and Recharge have a figure).
 - `elpris.json`: SE4 monthly spot averages (excl. VAT).
 
-Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot, charger choice) are stored only when typed by hand. A price typed for one charger is remembered per operator and offered for that operator's other chargers.
+Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot, charger choice) are stored only when typed by hand. The first price you enter for an operator becomes that operator's default for all its chargers without an own price. Later prices typed on a charger apply to that charger only; the button "use ... as default" changes the operator default. Order: own price, free, operator default, list price.
 
 ## Calculation (`calc(st, ch)` in `index.html`, tested)
 ```
