@@ -19,7 +19,7 @@ Live data from eurofuelprices.com (open CORS), no personal data is sent:
 - `ac_tariffs.json`: hand-kept operator list prices (only Mer, E.ON Drive and Recharge have a figure).
 - `elpris.json`: SE4 monthly spot averages (excl. VAT).
 
-Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot, charger choice) are stored only when typed by hand. The first price you enter for an operator becomes that operator's default for all its chargers without an own price. Later prices typed on a charger apply to that charger only; the button "use ... as default" changes the operator default. Order: own price, free, operator default, list price.
+Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot, charger choice) are stored only when typed by hand. Charger prices: see "Prices" below.
 
 ## Calculation (`calc(st, ch)` in `index.html`, tested)
 ```
@@ -31,7 +31,7 @@ break_even_electricity_price = value_per_kWh                    // SEK/kWh
 free_kWh       = 10.4 * (100 - max(battery%, hold%)) / (100 - hold%)
 road_kWh       = min(free_kWh, parking_h * min(car_kW, charger_kW))
 ```
-Decision: the best gain per kWh wins. Below 0.30 SEK/kWh, or with an almost full battery (< 0.5 kWh free), the advice is hybrid mode. If a road charger wins and more than 0.5 kWh remain, the rest is suggested at home. Trip mode: electric km = (battery now + charge on site, capped at one full battery) x 100 / kWh per 100 km.
+Decision: the best gain per kWh wins. Below `MIN_GAIN` (0.30 SEK/kWh), or with an almost full battery (< 0.5 kWh free), the advice is hybrid mode. If a road charger wins and more than 0.5 kWh remain, the rest is suggested at home only when home also clears `MIN_GAIN`. Trip mode: electric km = (battery now + charge on site, capped at one full battery) x 100 / kWh per 100 km.
 
 ## Vehicle and assumptions
 - Hyundai Santa Fe PHEV 1.6 T-GDi, model year 2025, battery 13.8 kWh gross. WLTP electric range 54 km (older sources: 58 km).
@@ -54,6 +54,9 @@ Petrol sources: Motor1 test (7.0 mixed, 8.3 motorway), m3.se cold test, Spritmon
 - **Chargers:** no free per-station price feed exists for Sweden (researched 2026-11-12). NOBIL (the data behind Sweden's national access point, Trafikverket's trafficdata.se) has no price fields, and its terms forbid exposing the API to end users (EuroFuelPrices `docs/NOBIL_TEST_2026-11-06.md`). The trafficdata.se catalogue lists NOBIL as its only charging dataset. Chargeprice and similar are commercial. 94 % of the Type 2 chargers up to 22 kW have no operator name (shown as "(Business Owner at Location)" or "(Unknown Operator)": shops, housing associations, hotels), so list prices cannot reach them.
   - Price order: your own price for the charger, free (per source), your operator default, operator list price (Mer, E.ON Drive, Recharge), Open Charge Map note (only a note that is exactly "<number> SEK/kWh", about 20 chargers, shown as unverified), your default for unnamed chargers (shown as not verified, and the recommendation says so).
   - The first price you enter for an operator, or for the group of unnamed chargers, becomes the default for all its chargers without an own price. Later prices typed on a charger apply to that charger only; the button "use ... as default" changes the default.
+
+## Input checks
+Stored settings are validated on start (a bad value falls back to the default, so the page cannot break). Petrol and home price are clamped at 0 and the page warns above plausible limits (petrol outside 8-30 SEK/l, home above 15 SEK/kWh). Pumps farther than 50 km are not listed, and a nearest charger farther than 30 km is flagged.
 
 ## Known gaps
 1. "Nearest" means straight-line distance, no routing.

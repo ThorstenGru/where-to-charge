@@ -77,6 +77,7 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .pos{color:var(--remote)} .neg{color:var(--neg)}
 .small{font-size:13px;color:var(--muted)}
 .hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+.hint:empty{display:none}
 .tiles{display:flex;gap:8px;margin:6px 0 12px}
 .tile{flex:1;border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
 .tile .cap{font-size:12px;color:var(--muted)}
@@ -97,6 +98,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   <!-- 1. Answer first -->
   <section id="verdict" class="verdict home" aria-live="polite"></section>
+  <p id="pricewarn" class="hint" style="color:var(--neg);font-weight:700;margin:0 0 12px"></p>
 
   <section class="card">
     <h2>Break-even: where charging and petrol cost the same</h2>
@@ -191,21 +193,26 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 (function(){
   var KEY = "wo-laden-heute-v1";
   var USABLE_KWH = 10.4;
+  var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
   var HOLD_DEFAULT = 15;   // static default: % on the display where the car holds charge in hybrid mode (changeable in the page)
   var SEASONS = {
     winter:{el:25, l:8.3, name:"Winter (about -5 to +5 °C): heating and a cold battery raise"},
     summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
   };
   function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
-  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, opp:{}, sel:null};
+  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0, ov:{}, opp:{}};
   // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price, charger choice) are stored only when the user typed them.
-  var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"}, TRANSIENT = {sel:1};
+  var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
   try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
   if(!S.ov || typeof S.ov !== "object"){ S.ov = {}; }
   if(!S.opp || typeof S.opp !== "object"){ S.opp = {}; }
+  // One odd stored value must never break the page: anything that is not a finite number, or an unknown season, falls back to the default.
+  ["petrol", "home", "soc", "hours", "kw", "trip", "hold"].forEach(function(k){ if(typeof S[k] !== "number" || !isFinite(S[k])){ S[k] = DEFAULT[k]; } });
+  if(!SEASONS[S.season]){ S.season = DEFAULT.season; }
+  S.soc = Math.min(100, Math.max(0, S.soc));
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
-  S.sel = null;
+  S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Find my location"
   S.hold = Math.min(60, Math.max(0, +S.hold));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
@@ -218,14 +225,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function hav(a,b,c,d){ var r=Math.PI/180, x=(c-a)*r, y=(d-b)*r, q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2); return 12742*Math.asin(Math.sqrt(q)); }
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
   var SEJ = null;
-  function getSE(){ return SEJ = SEJ || getJ("se.json").catch(function(e){ SEJ = null; throw e; }); }   // a failed load is not cached, so "Find my location" can retry   // petrol prices, loaded once
+  function getSE(){ return SEJ = SEJ || getJ("se.json").catch(function(e){ SEJ = null; throw e; }); }   // petrol prices, loaded once; a failed load is not cached, so it can retry
   function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function save(){
     try{
       var d = {};
       Object.keys(DEFAULT).forEach(function(k){
-        if(TRANSIENT[k] || (AUTO[k] && !S[AUTO[k]])){ return; }
+        if(AUTO[k] && !S[AUTO[k]]){ return; }
         if(JSON.stringify(S[k]) !== JSON.stringify(DEFAULT[k])){ d[k] = S[k]; }
       });
       if(Object.keys(d).length){ localStorage.setItem(KEY, JSON.stringify(d)); } else { localStorage.removeItem(KEY); }
@@ -264,31 +271,35 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   window.__calc = calc;   // for tests/calc.test.html
 
-  function renderVerdict(c){
-    var el = $("verdict");
-    var best = c.opts[0];
-    var h = c.opts.filter(function(o){ return o.id === "home"; })[0];
-    var cls, big, act, l1, l2 = "";
+  // The recommendation as plain data (tested in tests/calc.test.html). c = result of calc(), hours = parking time.
+  function advice(c, hours){
+    var best = c.opts[0], h = c.opts.filter(function(o){ return o.id === "home"; })[0], r = {l2: ""};
     if(c.free < 0.5){
-      cls = "hev"; big = "Do not charge"; act = "Do not plug in. Drive in hybrid mode.";
-      l1 = "The battery is practically full. Drive in hybrid mode.";
-    } else if(best.net < 0.3){
-      cls = "hev"; big = "Drive in HEV mode"; act = best.net > 0 ? "Do not bother plugging in. The saving is too small." : "Do not plug in. Petrol is cheaper today.";
-      l1 = best.net > 0 ? "The best option saves only " + fmt(best.net) + " SEK per kWh, below the 0.30 SEK/kWh needed to make it worth the effort." : "Charging costs more than petrol per km today.";
+      r.cls = "hev"; r.big = "Do not charge"; r.act = "Do not plug in. Drive in hybrid mode.";
+      r.l1 = "The battery is practically full. Drive in hybrid mode.";
+    } else if(best.net < MIN_GAIN){
+      r.cls = "hev"; r.big = "Drive in HEV mode"; r.act = best.net > 0 ? "Do not bother plugging in. The saving is too small." : "Do not plug in. Petrol is cheaper today.";
+      r.l1 = best.net > 0 ? "The best option saves only " + fmt(best.net) + " SEK per kWh, below the " + fmt(MIN_GAIN) + " SEK/kWh needed to make it worth the effort." : "Charging costs more than petrol per km today.";
     } else if(best.remote){
-      cls = "remote";
-      var rest = c.free - best.kwh, both = rest > 0.5 && h.net > 0;
-      big = both ? "Top up on the road, then charge the rest at home" : "Charge on the road";
-      act = "Plug in at " + best.name + " (" + fmt(S.hours, 1) + " h)" + (both ? ", then charge the rest at home." : ".");
-      l1 = best.name + " at " + (best.price > 0 ? fmt(best.price) + " SEK/kWh" : "no charge") + ": " + fmt(best.kwh, 1) + " kWh in " + fmt(S.hours, 1) + " h, " + sek(best.total) + " versus petrol." + (/^your default/.test(best.src || "") ? " Based on your default price, not checked for this charger." : "");
-      if(both){ l2 = "At home: the remaining " + fmt(rest, 1) + " kWh at " + fmt(h.price) + " SEK/kWh, " + sek(h.net * rest) + " versus petrol."; }
+      r.cls = "remote";
+      var rest = c.free - best.kwh, both = rest > 0.5 && h.net >= MIN_GAIN;   // the rest at home must clear the same limit
+      r.big = both ? "Top up on the road, then charge the rest at home" : "Charge on the road";
+      r.act = "Plug in at " + best.name + " (" + fmt(hours, 1) + " h)" + (both ? ", then charge the rest at home." : ".");
+      r.l1 = best.name + " at " + (best.price > 0 ? fmt(best.price) + " SEK/kWh" : "no charge") + ": " + fmt(best.kwh, 1) + " kWh in " + fmt(hours, 1) + " h, " + sek(best.total) + " versus petrol." + (/^your default/.test(best.src || "") ? " Based on your default price, not checked for this charger." : "");
+      if(both){ r.l2 = "At home: the remaining " + fmt(rest, 1) + " kWh at " + fmt(h.price) + " SEK/kWh, " + sek(h.net * rest) + " versus petrol."; }
     } else {
-      cls = "home"; big = "Charge at home"; act = "Plug in when you get home.";
-      l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
-      l2 = c.opts.length === 1 ? "Tap \"Find my location\" (step 2) and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
+      r.cls = "home"; r.big = "Charge at home"; r.act = "Plug in when you get home.";
+      r.l1 = fmt(best.kwh, 1) + " kWh at " + fmt(best.price) + " SEK/kWh: " + sek(best.total) + " versus petrol.";
+      r.l2 = c.opts.length === 1 ? "Tap \"Find my location\" (step 2) and pick a charger to compare." : "The chosen charger is more expensive per kWh than home.";
     }
-    el.className = "verdict " + cls;
-    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big" style="font-size:' + (big.length > 24 ? 30 : 40) + 'px">' + big + '</p><p class="act">' + esc(act) + '</p><p class="sub">' + esc(l1) + '</p>' + (l2 ? '<p class="sub">' + esc(l2) + '</p>' : '');
+    return r;
+  }
+  window.__advice = advice;
+
+  function renderVerdict(c){
+    var r = advice(c, S.hours), el = $("verdict");
+    el.className = "verdict " + r.cls;
+    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big" style="font-size:' + (r.big.length > 24 ? 30 : 40) + 'px">' + r.big + '</p><p class="act">' + esc(r.act) + '</p><p class="sub">' + esc(r.l1) + '</p>' + (r.l2 ? '<p class="sub">' + esc(r.l2) + '</p>' : '');
   }
 
   function renderBreak(c){
@@ -319,7 +330,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     });
     h += '<div class="cmp"><h3><span>Do not charge (HEV mode)</span></h3><p>The car runs on petrol and keeps the charge level. Electricity cost: 0 SEK. Every option above is measured against this: its result is what you save compared with driving the same kilometres on petrol.</p></div>';
     $("cmp").innerHTML = h;
-    $("rate").textContent = "1 kWh from the socket gives " + fmt(c.per, 1) + " km electric (" + c.se.el + " kWh/100 km), which replaces " + fmt(c.lPerKwh, 2) + " l of petrol (" + c.se.l + " l/100 km). At " + fmt(S.petrol) + " SEK/l that is worth " + fmt(c.value) + " SEK per kWh. Gain per kWh = that value minus the electricity price. The decision picks the highest gain per kWh. Below 0.30 SEK/kWh, or with an almost full battery, the advice is HEV mode.";
+    $("rate").textContent = "1 kWh from the socket gives " + fmt(c.per, 1) + " km electric (" + c.se.el + " kWh/100 km), which replaces " + fmt(c.lPerKwh, 2) + " l of petrol (" + c.se.l + " l/100 km). At " + fmt(S.petrol) + " SEK/l that is worth " + fmt(c.value) + " SEK per kWh. Gain per kWh = that value minus the electricity price. The decision picks the highest gain per kWh. Below " + fmt(MIN_GAIN) + " SEK/kWh, or with an almost full battery, the advice is HEV mode.";
   }
 
   // Trip: electric km = battery now + charge on site (chosen charger, capped at one full battery, assumed to happen mid-trip).
@@ -340,15 +351,26 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     o.textContent = t;
   }
 
-  // Price of one charger: own price > free (per source) > operator default > operator list price > Open Charge Map note > your default for unnamed chargers. Never invented.
+  // Open Charge Map notes: only a note that is exactly a price per kWh ("4 SEK/kWh") counts. Free text is never guessed. Returns SEK/kWh or null.
+  function parseNote(t){
+    var m = /^\s*(?:sek\s*)?(\d+(?:[.,]\d+)?)\s*(?:sek|kr|kronor)?\s*(?:\/|per)\s*kwh\s*$/i.exec(String(t)), v = m && parseFloat(m[1].replace(",", "."));
+    return v >= 0.5 && v <= 15 ? v : null;
+  }
+  // Price of one charger, first hit wins: own price > free (per source) > operator default > operator list price > Open Charge Map note > your default for unnamed chargers. Never invented.
+  function priceFor(c, ov, opp, tar, tdate){
+    if(ov[c.id] > 0){ return {price:ov[c.id], src:"own price"}; }
+    if(c.free){ return {price:0, src:"free according to source"}; }
+    if(c.key !== "*" && opp[c.key] > 0){ return {price:opp[c.key], src:"your default price for " + c.op}; }
+    if(tar[c.key]){ return {price:tar[c.key], src:"list price without subscription, as of " + tdate}; }
+    if(c.ocm){ return {price:c.ocm.p, src:"Open Charge Map note \"" + c.ocm.t + "\" (user-contributed, unverified)"}; }
+    if(c.key === "*" && opp["*"] > 0){ return {price:opp["*"], src:"your default for unnamed chargers, not verified"}; }
+    return null;
+  }
+  window.__priceFor = priceFor; window.__parseNote = parseNote;   // for tests/calc.test.html
   function resolvePrice(c){
+    var r = priceFor(c, S.ov, S.opp, N.tar, N.tdate);
     delete c.price; delete c.src;
-    if(S.ov[c.id] > 0){ c.price = S.ov[c.id]; c.src = "own price"; }
-    else if(c.free){ c.price = 0; c.src = "free according to source"; }
-    else if(c.key !== "*" && S.opp[c.key] > 0){ c.price = S.opp[c.key]; c.src = "your default price for " + c.op; }
-    else if(N.tar[c.key]){ c.price = N.tar[c.key]; c.src = "list price without subscription, as of " + N.tdate; }
-    else if(c.ocm){ c.price = c.ocm.p; c.src = "Open Charge Map note \"" + c.ocm.t + "\" (user-contributed, unverified)"; }
-    else if(c.key === "*" && S.opp["*"] > 0){ c.price = S.opp["*"]; c.src = "your default for unnamed chargers, not verified"; }
+    if(r){ c.price = r.price; c.src = r.src; }
   }
   // The operator default reaches every charger of that operator that has no own price.
   function spreadDefault(key){
@@ -440,16 +462,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
             (e.match.ocm_names || []).concat(e.match.nobil_names || []).forEach(function(n){ tar[nrm(n)] = e.ac.adhoc_kwh; });
           }
         });
-        // Open Charge Map notes: only a note that is exactly a price per kWh ("4 SEK/kWh") counts. Free text is never guessed.
         var nt = {};
-        (ev.notes || []).forEach(function(n){
-          var m = /^\s*(?:sek\s*)?(\d+(?:[.,]\d+)?)\s*(?:sek|kr|kronor)?\s*(?:\/|per)\s*kwh\s*$/i.exec(String(n[1])), v = m && parseFloat(m[1].replace(",", "."));
-          if(v >= 0.5 && v <= 15){ nt[n[0]] = {p:v, t:String(n[1])}; }
-        });
+        (ev.notes || []).forEach(function(n){ var v = parseNote(n[1]); if(v){ nt[n[0]] = {p:v, t:String(n[1])}; } });
         N.ch = ev.s.map(function(x, i){
           var op = x[2] > 0 ? ev.ops[x[2]-1] : "";
-          return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4), name:(op && op.charAt(0) !== "(" ? op : "Charger") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op) || "*", op:nrm(op) ? op : "unnamed chargers", ocm:nt[i], dist:hav(la, lo, x[0], x[1])};
-        }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })   // id = position, stable when the file is rebuilt
+          return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (nrm(op) ? "_" + nrm(op).replace(/[^a-z0-9]/g, "") : ""), name:(op && op.charAt(0) !== "(" ? op : "Charger") + (x[7] ? " " + x[7] : ""), kw:+x[3] || 0, free:(x[5] & 1) === 1, key:nrm(op) || "*", op:nrm(op) ? op : "unnamed chargers", ocm:nt[i], dist:hav(la, lo, x[0], x[1])};
+        }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })   // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
           .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5)
           .map(function(c){ resolvePrice(c); return c; });
         // Preselect the cheapest charger that has a price (the user can change or clear it).
@@ -460,12 +478,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
           var l = (s.prices || []).filter(function(q){ return q.octane === 95 && q.price > 12 && q.price < 25; }), p = l.filter(isFresh)[0] || l[0];
           if(p){ pe.push({name:(s.brand || s.name || "Petrol station") + (s.city ? ", " + s.city : ""), price:p.price, date:p.updated_at ? p.updated_at.slice(0,10) : "", fresh:isFresh(p), dist:hav(la, lo, s.lat, s.lon)}); }
         });
-        N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).slice(0, 5);
+        N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).filter(function(p){ return p.dist <= 50; }).slice(0, 5);   // a pump farther than 50 km is not "nearby"
         // Preselect the cheapest dated price; an undated price is chosen only if no dated one is nearby.
         N.pick = -1; N.pe.forEach(function(p, i){ var b = N.pe[N.pick]; if(N.pick < 0 || (p.fresh && !b.fresh) || (p.fresh === b.fresh && p.price < b.price)){ N.pick = i; } });
         if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; S.petrolEdited = false; }
         save();
-        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the cheapest charger with a known price are preselected; change them below.";
+        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the cheapest charger with a known price are preselected; change them below." +
+          (N.ch.length && N.ch[0].dist > 30 ? " Note: the nearest charger is " + fmt(N.ch[0].dist, 0) + " km away." : "");
+        if(!N.pe.length){ $("petrols").textContent = "No petrol price within 50 km of you."; }
         renderStations(); renderPetrols(); syncInputs(); update();
       }).catch(function(){ msg.textContent = "Could not load data from eurofuelprices.com."; });
     }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
@@ -533,13 +553,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }
 
   function syncInputs(){
-    $("petrol").value = fmt(S.petrol);
-    $("home").value = fmt(S.home);
-    $("kw").value = fmt(S.kw, 1);
-    $("hours").value = S.hours;
-    $("trip").value = fmt(S.trip || 0, 0);
-    $("hold").value = fmt(S.hold, 0);
-    $("soc").min = S.hold; $("soc").value = Math.max(S.soc, S.hold);
+    var set = function(id, v){ var e = $(id); if(document.activeElement !== e){ e.value = v; } };   // never rewrite the field the user is typing in
+    set("petrol", fmt(S.petrol));
+    set("home", fmt(S.home));
+    set("kw", fmt(S.kw, 1));
+    set("hours", S.hours);
+    set("trip", fmt(S.trip || 0, 0));
+    set("hold", fmt(S.hold, 0));
+    $("soc").min = S.hold; set("soc", Math.max(S.soc, S.hold));
     notes();
   }
 
@@ -557,6 +578,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     else if(!S.petrolEdited && N.petrolErr){ t = "No current petrol data. Using the built-in default of " + fmt(DEFAULT.petrol) + " SEK/l. Tap \"Find my location\" to try again."; }
     else { t = "Hand-entered or default petrol price. Tap \"Find my location\" to use a pump near you. No forecast: today's price only."; }
     $("petrolsrc").textContent = t;
+    var w = [];
+    if(S.petrol < 8 || S.petrol > 30){ w.push("Petrol " + fmt(S.petrol) + " SEK/l looks wrong."); }
+    if(S.home > 15){ w.push("Home price " + fmt(S.home) + " SEK/kWh looks wrong."); }
+    $("pricewarn").textContent = w.join(" ");
     $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick above.";
   }
 
@@ -571,8 +596,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     notes();
   }
 
-  $("petrol").addEventListener("input", function(e){ S.petrol = num(e.target.value, S.petrol); S.petrolEdited = true; N.pick = -1; save(); update(); });
-  $("home").addEventListener("input", function(e){ S.home = num(e.target.value, S.home); S.homeEdited = true; save(); update(); });
+  $("petrol").addEventListener("input", function(e){ S.petrol = Math.max(0, num(e.target.value, S.petrol)); S.petrolEdited = true; N.pick = -1; save(); update(); });
+  $("home").addEventListener("input", function(e){ S.home = Math.max(0, num(e.target.value, S.home)); S.homeEdited = true; save(); update(); });
   $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
