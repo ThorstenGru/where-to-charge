@@ -251,7 +251,22 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var $ = function(id){ return document.getElementById(id); };
   function home(spot){ return (spot + HOME_ADD) * VAT; }
   function selCharger(){ return N.ch.filter(function(c){ return c.id === S.sel; })[0] || null; }
-  function chLabel(c){ return c.name + " · " + c.op + " · " + (c.kw ? c.kw + " kW" : "power unknown") + " · Type 2 AC"; }
+  // Facts about a charger from the data file (ev_se.json flags). f = flag bits, yy = last verification year (2 digits), now = current year.
+  // Price-like entries (cost notes) are not used. Bit 64 means "only fixed-cable Type 2 here"; its absence says nothing, so nothing is claimed then.
+  function facts(pts, f, yy, now){
+    var a = [];
+    if(pts > 0){ a.push(pts + (pts === 1 ? " point" : " points")); }
+    if(f & 64){ a.push("fixed cable (no own cable needed)"); }
+    if(f & 1){ a.push("free according to the source"); }
+    if(f & 2){ a.push("card or membership needed"); }
+    if(f & 4){ a.push("notice required"); }
+    if(f & 8){ a.push("pay at the location"); }
+    if(f & 128){ a.push("parking fee"); } else if(f & 16){ a.push("parking fee mentioned (unverified)"); }
+    if(yy > 0){ a.push("last verified 20" + (yy < 10 ? "0" : "") + yy + (now - (2000 + yy) >= 2 ? " (old)" : "")); }
+    return a;
+  }
+  window.__facts = facts;   // for tests/calc.test.html
+  function chLabel(c){ return c.name + " · " + c.op + " · " + (c.kw ? c.kw + " kW" : "power unknown") + " · Type 2 AC" + (c.pts ? " · " + c.pts + (c.pts === 1 ? " point" : " points") : ""); }
 
   // st = settings, ch = the chosen charger (or null). The road price is unknown by design: the road option only gets
   // what it can deliver (kWh, km, petrol saved) and the highest price worth paying.
@@ -390,9 +405,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function renderChInfo(){
     var c = selCharger(), el = $("chinfo");
     if(!N.ch.length){ el.innerHTML = ""; return; }
-    el.innerHTML = c
-      ? '<b>' + esc(c.name) + '</b><br>Operator: ' + esc(c.op) + ' · Power: ' + (c.kw ? c.kw + ' kW' : 'unknown') + ' · Connector: Type 2 AC · ' + fmt(c.dist, 1) + ' km away <button class="chip" id="chclear" style="padding:2px 8px;font-size:12px">clear</button>'
-      : 'No charger selected: the comparison uses home only. Tap a charger on the map.';
+    el.innerHTML = (c
+      ? '<b>' + esc(c.name) + '</b><br>Operator: ' + esc(c.op) + ' · Power: ' + (c.kw ? c.kw + ' kW' : 'unknown') + ' · Connector: Type 2 AC · ' + fmt(c.dist, 1) + ' km away <button class="chip" id="chclear" style="padding:2px 8px;font-size:12px">clear</button>' +
+        '<br><span class="small">' + esc(facts(c.pts, c.f, c.yy, new Date().getFullYear()).join(" · ")) + '</span>'
+      : 'No charger selected: the comparison uses home only. Tap a charger on the map.') +
+      (N.evsrc ? '<p class="hint">Charger data: ' + esc(N.evsrc.by.join(", ")) + (N.evsrc.gen ? ', file of ' + esc(N.evsrc.gen) : '') + '.</p>' : '');
   }
 
   function renderPetrols(){
@@ -430,10 +447,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       Promise.all([getJ("ev_se.json"), getSE()]).then(function(r){
         var ev = r[0], seen = {};
         if(ev.v !== 1){ throw 0; }   // column layout of ev_se.json is only known for version 1
+        N.evsrc = {gen:String(ev.generated || ""), by:(ev.sources || []).map(function(n){ return n === "NOBIL" ? "NOBIL by Enova (CC BY 4.0)" : n === "OCM" ? "Open Charge Map contributors (CC BY 4.0)" : String(n); })};
         N.ch = ev.s.map(function(x){
           var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
           // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
-          return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
+          return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
         }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
           .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 150);
         S.sel = N.ch.length ? N.ch[0].id : null;   // the nearest charger is preselected; tap another on the map or clear it

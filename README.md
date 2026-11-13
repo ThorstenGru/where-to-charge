@@ -15,7 +15,7 @@ Page order: recommendation, break-even, then six input steps (car, location, pet
 
 Live data from eurofuelprices.com (open CORS), no personal data is sent:
 - `se.json`: petrol prices. The page uses the median of prices dated in the last 3 days (all prices if fewer than 20 are dated), cached 6 hours. "Find my location" lists the 5 nearest pumps and preselects the cheapest dated one.
-- `ev_se.json`: charger positions (Open Charge Map, NOBIL), version 1 only. All entries are Type 2 AC. The 150 nearest chargers up to 22 kW are shown on a map (Leaflet, OpenStreetMap tiles); tapping one selects it. The page shows operator, power and connector type of a charger and nothing else: **no charger prices**.
+- `ev_se.json`: charger positions (Open Charge Map, NOBIL), version 1 only. All entries are Type 2 AC. The 150 nearest chargers up to 22 kW are shown on a map (Leaflet, OpenStreetMap tiles); tapping one selects it. For the selected charger the page shows name, operator, power, connector type (Type 2 AC), number of points, and the flags of the data file: fixed cable, card or membership needed, notice required, pay at the location, parking fee, free according to the source, and the year of the last verification (marked old after 2 years). Cost notes and prices are not used: **no charger prices**. A credit line names the sources (Open Charge Map contributors, NOBIL by Enova, both CC BY 4.0) and the file date.
 - `elpris.json`: SE4 monthly spot averages (excl. VAT).
 
 Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot) are stored only when typed by hand. The chosen charger is never stored.

@@ -48,6 +48,20 @@ document.querySelector("iframe").onload = function () {
   yes("full battery: do not charge", adv(calc(Object.assign({}, base, {soc: 100, home: 4}), null), 1).big === "Do not charge");
   yes("home dearer than petrol: HEV mode", adv(calc(Object.assign({}, base, {home: 6}), null), 1).big === "Drive in HEV mode");
 
+  // --- charger facts from the data flags ---
+  var facts = this.contentWindow.__facts;
+  function has(name, list, part) { yes(name, list.join("|").indexOf(part) >= 0); }
+  var all = facts(4, 64 | 2 | 4 | 8 | 128 | 1, 24, 2026);
+  has("points", all, "4 points"); has("fixed cable", all, "fixed cable"); has("card", all, "card or membership");
+  has("notice", all, "notice required"); has("pay", all, "pay at the location"); has("free", all, "free according");
+  has("parking fee", all, "parking fee"); has("verified", all, "last verified 2024");
+  yes("fresh verification is not marked old", all.join("|").indexOf("(old)") < 0);
+  has("old verification is marked", facts(1, 0, 19, 2026), "last verified 2019 (old)");
+  has("one point", facts(1, 0, 25, 2026), "1 point");
+  yes("no flags, no year: nothing claimed", facts(0, 0, 0, 2026).length === 0);
+  yes("no fixed-cable claim without the flag", facts(2, 2, 25, 2026).join("|").indexOf("cable") < 0);
+  yes("parking hint only as unverified", facts(2, 16, 25, 2026).join("|").indexOf("(unverified)") > 0);
+
   document.title = fail ? "FAIL" : "PASS";
   document.getElementById("o").textContent = (fail ? fail + " FAILED\n" : "ALL PASSED\n") + out.join("\n");
 };
