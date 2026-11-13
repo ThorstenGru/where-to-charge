@@ -44,7 +44,7 @@ document.querySelector("iframe").onload = function () {
   var cheapHome = adv(calc(Object.assign({}, base, {home: 4.9}), ch), 1);
   yes("weak home gain (0.08): HEV mode", cheapHome.big === "Drive in HEV mode");
   yes("HEV: road limit is named", /below 4\.68 SEK\/kWh/.test(cheapHome.l2));
-  yes("no charger: points to the map", /Find my location/.test(adv(calc(Object.assign({}, base, {home: 4.0}), null), 1).l2));
+  yes("no charger: points to the map", /Use my location/.test(adv(calc(Object.assign({}, base, {home: 4.0}), null), 1).l2));
   yes("full battery: do not charge", adv(calc(Object.assign({}, base, {soc: 100, home: 4}), null), 1).big === "Do not charge");
   yes("home dearer than petrol: HEV mode", adv(calc(Object.assign({}, base, {home: 6}), null), 1).big === "Drive in HEV mode");
 
@@ -55,7 +55,8 @@ document.querySelector("iframe").onload = function () {
   has("points", all, "4 points"); has("fixed cable", all, "fixed cable"); has("card", all, "card or membership");
   has("notice", all, "notice required"); has("pay", all, "pay at the location"); has("free", all, "free according");
   has("parking fee", all, "parking fee"); has("verified", all, "last verified 2024");
-  yes("fresh verification is not marked old", all.join("|").indexOf("(old)") < 0);
+  yes("last year verification is not marked old", facts(4, 0, 25, 2026).join("|").indexOf("(old)") < 0);
+  has("two years old is marked old", all, "last verified 2024 (old)");
   has("old verification is marked", facts(1, 0, 19, 2026), "last verified 2019 (old)");
   has("one point", facts(1, 0, 25, 2026), "1 point");
   yes("no flags, no year: nothing claimed", facts(0, 0, 0, 2026).length === 0);

@@ -67,6 +67,7 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
   background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+.primary{font-size:17px;padding:12px 22px;font-weight:700;background:var(--remote);color:var(--surface);border-color:var(--remote)}
 .chip[aria-pressed="true"]{border-color:var(--remote);box-shadow:0 0 0 2px var(--remote) inset}
 .opt{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;
   padding:10px 0;border-top:1px solid var(--line)}
@@ -104,7 +105,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 <main>
   <h1>Where to charge today?</h1>
 
-  <!-- 1. Answer first -->
+  <!-- 0. Location first: it sets the petrol price and the chargers, which the recommendation depends on -->
+  <section class="card">
+    <h2>Where are you?</h2>
+    <button id="loc" class="chip primary">Use my location</button>
+    <p id="locmsg" class="small" style="margin:8px 0 0">Your location sets the petrol price and shows the chargers around you. It stays on your phone; only the map tiles reveal the area to OpenStreetMap.</p>
+  </section>
+
+  <!-- 1. Answer -->
   <section id="verdict" class="verdict home" aria-live="polite"></section>
   <p id="pricewarn" class="hint" style="color:var(--neg);font-weight:700;margin:0 0 12px"></p>
 
@@ -114,9 +122,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <p class="hint">Left: charging stops paying when petrol gets cheaper than this. Right: petrol becomes the cheaper choice when electricity gets more expensive than this. Both are the same tipping point, once in petrol terms, once in electricity terms. On the road the page does not know the price: it shows the highest price worth paying, and you compare it with the price in the charger's app.</p>
   </section>
 
-  <!-- 2. Inputs, in the order you think about them: car, where I am, petrol, road charger, home, trip -->
+  <!-- 2. What you can adjust: car, chargers, petrol, home, trip -->
   <section class="card">
-    <h2>1 · My car now</h2>
+    <h2>Your car</h2>
     <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
     <input id="soc" type="range" min="0" max="100" step="5">
     <p class="hint">Only the charge above the hybrid hold level can be recharged (about 10.4 kWh from the socket). The hold level is set under "Car settings and assumptions" at the bottom.</p>
@@ -130,22 +138,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   </section>
 
   <section class="card">
-    <h2>2 · Where I am</h2>
-    <button id="loc" class="chip" style="font-size:16px;padding:10px 18px;font-weight:700">Find my location</button>
-    <p id="locmsg" class="small" style="margin:8px 0 0">Finds the nearest petrol stations and shows chargers on the map below.</p>
-  </section>
-
-  <section class="card">
-    <h2>3 · Petrol (daily price)</h2>
-    <label class="l" for="petrol">Petrol 95 (SEK/l), loaded automatically</label>
-    <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
-    <p id="petrolsrc" class="hint"></p>
-    <div id="petrols" class="small" style="margin-top:8px">After "Find my location" the 5 nearest petrol stations appear here. Pick one and its price replaces the price above.</div>
-  </section>
-
-  <section class="card">
-    <h2>4 · Charging on the road (Type 2, AC)</h2>
-    <p id="mapmsg" class="small" style="margin:0">After "Find my location" the chargers around you appear on a map. Tap one to select it.</p>
+    <h2>Chargers near you (Type 2, AC)</h2>
+    <p id="mapmsg" class="small" style="margin:0">After "Use my location" (top of the page) the chargers around you appear on a map. Tap one to select it.</p>
     <div id="map"></div>
     <div id="chinfo"></div>
     <div class="gap"></div>
@@ -155,7 +149,15 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   </section>
 
   <section class="card">
-    <h2>5 · Charging at home (monthly price)</h2>
+    <h2>Petrol (daily price)</h2>
+    <label class="l" for="petrol">Petrol 95 (SEK/l), loaded automatically</label>
+    <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
+    <p id="petrolsrc" class="hint"></p>
+    <div id="petrols" class="small" style="margin-top:8px">After "Use my location" the 5 nearest petrol stations appear here. Pick one and its price replaces the price above.</div>
+  </section>
+
+  <section class="card">
+    <h2>Home electricity (monthly price)</h2>
     <label class="l" for="home">Home electricity (SEK/kWh), calculated or estimated</label>
     <input id="home" type="text" inputmode="decimal" autocomplete="off">
     <p class="hint">Unlike petrol, electricity at home is billed at the average of the whole month, so the day or hour of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:</p>
@@ -165,7 +167,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   </section>
 
   <section class="card">
-    <h2>6 · Trip (optional)</h2>
+    <h2>Trip (optional)</h2>
     <label class="l" for="trip">Round-trip distance (km), 0 = off</label>
     <input id="trip" type="text" inputmode="decimal" autocomplete="off">
     <p id="tripout" class="small" style="margin:8px 0 0;color:var(--ink)"></p>
@@ -209,7 +211,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
   };
   function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
-  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:"winter", soc:20, hours:1, kw:3.6, trip:0};
+  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:(new Date().getMonth() >= 9 || new Date().getMonth() <= 2) ? "winter" : "summer", soc:20, hours:1, kw:3.6, trip:0};
   // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price) are stored only when the user typed them.
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
@@ -219,7 +221,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   if(!SEASONS[S.season]){ S.season = DEFAULT.season; }
   S.soc = Math.min(100, Math.max(0, S.soc));
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
-  S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Find my location"
+  S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Use my location"
   S.hold = Math.min(60, Math.max(0, +S.hold));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
 
@@ -303,7 +305,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       a.cls = "home"; a.big = "Charge at home";
       a.act = r ? "Top up at " + r.name + " only if its app shows less than " + fmt(x) + " SEK/kWh. Charge the rest at home." : "Plug in when you get home.";
       a.l1 = fmt(h.kwh, 1) + " kWh at " + fmt(h.price) + " SEK/kWh: " + sek(h.total) + " versus petrol.";
-      a.l2 = r ? roadLine + " Any road price below the home price of " + fmt(h.price) + " SEK/kWh saves even more." : "Tap \"Find my location\" (step 2) and pick a charger on the map to see the highest road price worth paying.";
+      a.l2 = r ? roadLine + " Any road price below the home price of " + fmt(h.price) + " SEK/kWh saves even more." : "Tap \"Use my location\" at the top, then pick a charger on the map to see the highest road price worth paying.";
     }
     return a;
   }
@@ -365,7 +367,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var batt = USABLE_KWH * (Math.max(S.soc, S.hold) - S.hold) / (100 - S.hold);
     var r = c.road, add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
     var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
-    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger on the map (step 4) to add charging on site.");
+    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger on the map to add charging on site.");
     if(kmAll >= km){ t += " Fully electric: yes (" + fmt(km, 0) + " km trip)."; }
     else {
       var l = (km - kmAll) * c.se.l / 100;
@@ -475,7 +477,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   // Petrol is a daily price and loads automatically: national median of prices dated within the last 3 days
   // (all prices if fewer than 20 are dated). Cached for 6 hours so the 1.3 MB file is not fetched on every open.
-  // "Find my location" replaces it with a nearby pump.
+  // "Use my location" replaces it with a nearby pump.
   var FRESH_MS = 3 * 864e5, PCACHE = "wo-laden-petrol-v1";
   function isFresh(q){ return !!q.updated_at && Date.now() - Date.parse(q.updated_at) < FRESH_MS; }
   function useMedian(m){ N.med = m; if(!S.petrolEdited && N.pick < 0){ S.petrol = m.price; } syncInputs(); update(); }
@@ -556,9 +558,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     $("seasonnote").textContent = seasonNote(se);
     var p = N.pe[N.pick], t;
     if(p && Math.abs(p.price - S.petrol) < 0.005){ t = "Petrol price from " + p.name + ", " + fmt(p.dist, 1) + " km away" + (p.date ? ", as of " + p.date : ", date unknown") + ". No forecast: today's pump price only."; }
-    else if(!S.petrolEdited && N.med){ t = (N.med.fresh ? "Daily price, loaded automatically: national median of " + N.med.n + " prices dated in the last 3 days" : "Few dated prices today: median of all " + N.med.n + " Swedish prices, some may be older") + (N.med.date ? " (newest " + N.med.date + ")" : "") + ". Tap \"Find my location\" to use a pump near you."; }
-    else if(!S.petrolEdited && N.petrolErr){ t = "No current petrol data. Using the built-in default of " + fmt(DEFAULT.petrol) + " SEK/l. Tap \"Find my location\" to try again."; }
-    else { t = "Hand-entered or default petrol price. Tap \"Find my location\" to use a pump near you. No forecast: today's price only."; }
+    else if(!S.petrolEdited && N.med){ t = (N.med.fresh ? "Daily price, loaded automatically: national median of " + N.med.n + " prices dated in the last 3 days" : "Few dated prices today: median of all " + N.med.n + " Swedish prices, some may be older") + (N.med.date ? " (newest " + N.med.date + ")" : "") + ". Tap \"Use my location\" to use a pump near you."; }
+    else if(!S.petrolEdited && N.petrolErr){ t = "No current petrol data. Using the built-in default of " + fmt(DEFAULT.petrol) + " SEK/l. Tap \"Use my location\" to try again."; }
+    else { t = "Hand-entered or default petrol price. Tap \"Use my location\" to use a pump near you. No forecast: today's price only."; }
     $("petrolsrc").textContent = t;
     var w = [];
     if(S.petrol < 8 || S.petrol > 30){ w.push("Petrol " + fmt(S.petrol) + " SEK/l looks wrong."); }
@@ -595,6 +597,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   update();
   loadPetrol();
   loadSpot();
+  // If the permission is already granted, locate right away: no extra tap, no prompt.
+  try{ navigator.permissions.query({name:"geolocation"}).then(function(p){ if(p.state === "granted"){ locate(); } }).catch(function(){}); }catch(e){}
 })();
 </script>
 </body>

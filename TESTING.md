@@ -14,8 +14,8 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Home electricity shows month chips: October "calculated from your bill" = 2.88, November estimated.
 - [ ] Airplane mode: the page still opens and warns about missing data instead of breaking.
 
-## 3. Find my location (5 min)
-- [ ] Tap "Find my location", allow access. Five petrol stations appear and the map shows chargers around you.
+## 3. Use my location (5 min)
+- [ ] Tap "Use my location", allow access. Five petrol stations appear and the map shows chargers around you.
 - [ ] The nearest petrol station and charger are really near you (compare with a maps app).
 - [ ] Pick a petrol station: the petrol price above changes to it.
 - [ ] Tap a charger on the map: details (operator, power, Type 2 AC) appear and the recommendation names the highest road price worth paying. Compare it with the price in the charger's app.

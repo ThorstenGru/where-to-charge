@@ -11,10 +11,10 @@ A phone web page that decides every day: **charge on the road (and top up at hom
 - `TESTING.md`: phone test and calibration checklist.
 
 ## How the page works
-Page order: recommendation, break-even, then six input steps (car, location, petrol, road charger, home price, trip), then details and settings.
+Page order: location (it sets petrol price and chargers, so it comes first; it runs by itself when the permission is already granted), recommendation, break-even, then what you can adjust (car, chargers on the map, petrol, home electricity, trip), then details and settings. The season follows the date (October to March = winter) until you pick one.
 
 Live data from eurofuelprices.com (open CORS), no personal data is sent:
-- `se.json`: petrol prices. The page uses the median of prices dated in the last 3 days (all prices if fewer than 20 are dated), cached 6 hours. "Find my location" lists the 5 nearest pumps and preselects the cheapest dated one.
+- `se.json`: petrol prices. The page uses the median of prices dated in the last 3 days (all prices if fewer than 20 are dated), cached 6 hours. "Use my location" lists the 5 nearest pumps and preselects the cheapest dated one.
 - `ev_se.json`: charger positions (Open Charge Map, NOBIL), version 1 only. All entries are Type 2 AC. The 150 nearest chargers up to 22 kW are shown on a map (Leaflet, OpenStreetMap tiles); tapping one selects it. For the selected charger the page shows name, operator, power, connector type (Type 2 AC), number of points, and the flags of the data file: fixed cable, card or membership needed, notice required, pay at the location, parking fee, free according to the source, and the year of the last verification (marked old after 2 years). Cost notes and prices are not used: **no charger prices**. A credit line names the sources (Open Charge Map contributors, NOBIL by Enova, both CC BY 4.0) and the file date.
 - `elpris.json`: SE4 monthly spot averages (excl. VAT).
 
