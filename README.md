@@ -5,7 +5,7 @@ Live: https://thorstengru.github.io/where-to-charge/ · Repo: ThorstenGru/where-
 A phone web page that decides every day: **charge on the road (and top up at home), charge at home, or do not charge (drive in hybrid mode on petrol)**.
 
 ## Files
-- `index.html`: the whole app (HTML, CSS, JS inline, no build, no external fonts). Deployed with GitHub Pages from `main`.
+- `index.html`: the whole app (HTML, CSS, JS inline, no build; the only libraries are Leaflet from cdnjs with an integrity hash). Deployed with GitHub Pages from `main`.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`: install as a home-screen app. No service worker (the page needs live data anyway).
 - `tests/calc.test.html`: tests for the calculation. Open it over http (`python -m http.server`, then `/tests/calc.test.html`, or the same path on the Pages URL). The title says PASS or FAIL.
 - `TESTING.md`: phone test and calibration checklist.
@@ -15,11 +15,10 @@ Page order: recommendation, break-even, then six input steps (car, location, pet
 
 Live data from eurofuelprices.com (open CORS), no personal data is sent:
 - `se.json`: petrol prices. The page uses the median of prices dated in the last 3 days (all prices if fewer than 20 are dated), cached 6 hours. "Find my location" lists the 5 nearest pumps and preselects the cheapest dated one.
-- `ev_se.json`: charger positions (Open Charge Map, NOBIL), version 1 only. Nearest 5 Type 2 chargers up to 22 kW. A charger's id is its rounded position, so saved prices survive data rebuilds.
-- `ac_tariffs.json`: hand-kept operator list prices (only Mer, E.ON Drive and Recharge have a figure).
+- `ev_se.json`: charger positions (Open Charge Map, NOBIL), version 1 only. All entries are Type 2 AC. The 150 nearest chargers up to 22 kW are shown on a map (Leaflet, OpenStreetMap tiles); tapping one selects it. The page shows operator, power and connector type of a charger and nothing else: **no charger prices**.
 - `elpris.json`: SE4 monthly spot averages (excl. VAT).
 
-Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot, charger choice) are stored only when typed by hand. Charger prices: see "Prices" below.
+Settings are stored on the device only when they differ from the defaults. Values that come from data (pump price, home price from spot) are stored only when typed by hand. The chosen charger is never stored.
 
 ## Calculation (`calc(st, ch)` in `index.html`, tested)
 ```
@@ -30,8 +29,9 @@ break_even_petrol_price      = electricity_price / l_per_kWh   // SEK/l
 break_even_electricity_price = value_per_kWh                    // SEK/kWh
 free_kWh       = 10.4 * (100 - max(battery%, hold%)) / (100 - hold%)
 road_kWh       = min(free_kWh, parking_h * min(car_kW, charger_kW))
+road_limit     = value_per_kWh - MIN_GAIN        // highest road price worth paying
 ```
-Decision: the best gain per kWh wins. Below `MIN_GAIN` (0.30 SEK/kWh), or with an almost full battery (< 0.5 kWh free), the advice is hybrid mode. If a road charger wins and more than 0.5 kWh remain, the rest is suggested at home only when home also clears `MIN_GAIN`. Trip mode: electric km = (battery now + charge on site, capped at one full battery) x 100 / kWh per 100 km.
+Decision: the road price is unknown by design, so only home is rated against petrol. Home gain below `MIN_GAIN` (0.30 SEK/kWh), or an almost full battery (< 0.5 kWh free): hybrid mode. Otherwise: charge at home; with a charger chosen the page adds "top up there only if its app shows less than X" with X = min(home price, road_limit). In hybrid mode it names the road limit. Trip mode: electric km = (battery now + charge on site, capped at one full battery) x 100 / kWh per 100 km.
 
 ## Vehicle and assumptions
 - Hyundai Santa Fe PHEV 1.6 T-GDi, model year 2025, battery 13.8 kWh gross. WLTP electric range 54 km (older sources: 58 km).
@@ -51,9 +51,7 @@ Petrol sources: Motor1 test (7.0 mixed, 8.3 motorway), m3.se cold test, Spritmon
   - The last bill month is "calculated from your bill" (`BILL` in the code). The current month is an estimate for the whole month (known days + typical rest). The next 3 months are estimates.
   - Estimates are a rule of thumb, not a market forecast: typical level of the month in 2023-25, raised by the factor (capped at 5) by which the last 3 months exceeded typical, with that excess fading 30 % per month. Range: back to typical .. excess persists.
   - `HOME_ADD` is valid until `HOME_ADD_VALID_TO` (2026-12-31); after that the page warns that fees may be outdated. Update `HOME_ADD` and `BILL` from the next bill.
-- **Chargers:** no free per-station price feed exists for Sweden (researched 2026-11-12). NOBIL (the data behind Sweden's national access point, Trafikverket's trafficdata.se) has no price fields, and its terms forbid exposing the API to end users (EuroFuelPrices `docs/NOBIL_TEST_2026-11-06.md`). The trafficdata.se catalogue lists NOBIL as its only charging dataset. Chargeprice and similar are commercial. 94 % of the Type 2 chargers up to 22 kW have no operator name (shown as "(Business Owner at Location)" or "(Unknown Operator)": shops, housing associations, hotels), so list prices cannot reach them.
-  - Price order: your own price for the charger, free (per source), your operator default, operator list price (Mer, E.ON Drive, Recharge), Open Charge Map note (only a note that is exactly "<number> SEK/kWh", about 20 chargers, shown as unverified), your default for unnamed chargers (shown as not verified, and the recommendation says so).
-  - The first price you enter for an operator, or for the group of unnamed chargers, becomes the default for all its chargers without an own price. Later prices typed on a charger apply to that charger only; the button "use ... as default" changes the default.
+- **Chargers have no price in the page.** No free per-station price feed exists for Sweden (researched 2026-11-12): NOBIL (the data behind Trafikverket's national access point trafficdata.se) has no price fields, and its terms forbid exposing the API to end users (EuroFuelPrices `docs/NOBIL_TEST_2026-11-06.md`); Chargeprice and similar are commercial; 94 % of the Type 2 chargers up to 22 kW have no operator name. Instead the page shows what a road charge can deliver (kWh, km, petrol saved) and the highest price worth paying; you compare it with the price in the charger's app. Break-even tiles and a small table (app price 3-7 SEK/kWh, and petrol -3/0/+3 SEK/l) show where the decision flips.
 
 ## Input checks
 Stored settings are validated on start (a bad value falls back to the default, so the page cannot break). Petrol and home price are clamped at 0 and the page warns above plausible limits (petrol outside 8-30 SEK/l, home above 15 SEK/kWh). Pumps farther than 50 km are not listed, and a nearest charger farther than 30 km is flagged.
@@ -61,7 +59,7 @@ Stored settings are validated on start (a bad value falls back to the default, s
 ## Known gaps
 1. "Nearest" means straight-line distance, no routing.
 2. Winter range/consumption, AC power and the hybrid hold level are not measured yet.
-3. Petrol and charger prices are crowd data or list prices and age quickly. Parking and idle fees and detours are not in the model.
+3. Petrol prices are crowd data and age quickly. The road price must be read from the charger's app. Parking and idle fees and detours are not in the model.
 4. The page has not been tested on a real phone.
 
 ## Ideas
@@ -70,7 +68,7 @@ Stored settings are validated on start (a bad value falls back to the default, s
 - Real routing instead of straight-line distances.
 
 ## Constraints
-- One file, no build, no third-party requests except eurofuelprices.com (Content-Security-Policy in the page).
+- One file, no build. Requests go only to eurofuelprices.com (data), cdnjs (Leaflet, integrity-checked) and tile.openstreetmap.org (map tiles; they see your IP and the map area). Content-Security-Policy in the page.
 - Mobile first, light/dark via `prefers-color-scheme`, safe-area insets respected.
 - UI language: English. Decimal point in the display; input accepts comma and point.
 - Short, clear recommendation with numbers. No filler.

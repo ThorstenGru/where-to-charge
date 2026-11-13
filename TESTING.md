@@ -15,10 +15,10 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Airplane mode: the page still opens and warns about missing data instead of breaking.
 
 ## 3. Find my location (5 min)
-- [ ] Tap "Find my location", allow access. Five petrol stations and five chargers appear.
+- [ ] Tap "Find my location", allow access. Five petrol stations appear and the map shows chargers around you.
 - [ ] The nearest petrol station and charger are really near you (compare with a maps app).
 - [ ] Pick a petrol station: the petrol price above changes to it.
-- [ ] Pick a charger and enter its real price from its app: price, power and the recommendation update.
+- [ ] Tap a charger on the map: details (operator, power, Type 2 AC) appear and the recommendation names the highest road price worth paying. Compare it with the price in the charger's app.
 
 ## 4. Calibrate the assumptions (over 2-3 weeks)
 Write down the real values and change the defaults in `index.html` (or on the page) if they differ.

@@ -7,64 +7,46 @@
 <iframe src="../index.html" style="display:none"></iframe>
 <script>
 document.querySelector("iframe").onload = function () {
-  var calc = this.contentWindow.__calc, out = [], fail = 0;
+  var calc = this.contentWindow.__calc, adv = this.contentWindow.__advice, out = [], fail = 0;
   function eq(name, got, want, tol) {
     var ok = Math.abs(got - want) <= (tol || 0.01);
     if (!ok) fail++;
     out.push((ok ? "PASS " : "FAIL ") + name + ": got " + got + ", want " + want);
   }
+  function yes(name, cond) { eq(name, cond ? 1 : 0, 1); }
+
+  // --- calculation: winter, battery 20 %, hold 15 %, petrol 15.74, home 5.00, 3 h, car 3.6 kW, charger 22 kW ---
   var st = {season: "winter", soc: 20, hold: 15, petrol: 15.74, home: 5, hours: 3, kw: 3.6};
-  var c = calc(st, {id: "x", name: "X", price: 4.5, kw: 22});
-  var road = c.opts.filter(function (o) { return o.remote; })[0];
-  var home = c.opts.filter(function (o) { return !o.remote; })[0];
+  var c = calc(st, {id: "x", name: "X", op: "Mer", kw: 22});
   eq("free kWh (10.4 * 80/85)", c.free, 9.788);
-  eq("road kWh (battery room is the limit)", road.kwh, 9.788);
-  eq("road total SEK", road.total, 7.10);
-  eq("home total SEK", home.total, 2.21);
-  eq("petrol break-even home", home.be, 15.06);
-  eq("electricity break-even", c.value, 5.2257);
-  eq("best option is the road charger", c.opts[0] === road ? 1 : 0, 1);
+  eq("home kWh = free kWh", c.home.kwh, 9.788);
+  eq("home total SEK", c.home.total, 2.21);
+  eq("home petrol break-even", c.home.be, 15.06);
+  eq("electricity break-even (value per kWh)", c.value, 5.2257);
+  eq("worth-the-effort limit", c.limit, 5.2257 - 0.3);
+  eq("road kWh (battery room is the limit)", c.road.kwh, 9.788);
+  eq("road petrol value SEK", c.road.saved, 51.15);
+  eq("no charger: no road option", calc(st, null).road === null ? 1 : 0, 1);
 
-  eq("soc below hold counts as hold level", calc({season: "winter", soc: 5, hold: 15, petrol: 15, home: 5, hours: 1, kw: 3.6}, null).free, 10.4);
-  eq("full battery has nothing to charge", calc({season: "winter", soc: 100, hold: 15, petrol: 15, home: 5, hours: 1, kw: 3.6}, null).free, 0);
-  var shortStay = calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 0.5, kw: 3.6}, {id: "y", name: "Y", price: 4, kw: 22});
-  eq("0.5 h at 3.6 kW is limited by time", shortStay.opts.filter(function (o) { return o.remote; })[0].kwh, 1.8);
-  var slow = calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 12, kw: 3.6}, {id: "z", name: "Z", price: 4, kw: 2.3});
-  eq("charger slower than the car sets the power", slow.opts.filter(function (o) { return o.remote; })[0].pw, 2.3);
-  var free = calc(st, {id: "f", name: "F", price: 0, kw: 22});
-  eq("free charger: gain per kWh equals the petrol value", free.opts[0].net, free.value);
-
-
-  // --- price order and note parser ---
-  var pf = this.contentWindow.__priceFor, pn = this.contentWindow.__parseNote, adv = this.contentWindow.__advice;
-  function pr(name, got, want) { eq(name, got ? got.price : -1, want); }
-  var tar = {mer: 6}, tdate = "2026-11-07";
-  var named = {id: "a", key: "mer", op: "Mer", free: false, ocm: {p: 3, t: "3 SEK/kWh"}};
-  var unnamed = {id: "b", key: "*", op: "unnamed chargers", free: false};
-  pr("own price beats everything", pf(Object.assign({}, named, {free: true}), {a: 7}, {mer: 5}, tar, tdate), 7);
-  pr("free beats defaults and list", pf(Object.assign({}, named, {free: true}), {}, {mer: 5}, tar, tdate), 0);
-  pr("operator default beats list price", pf(named, {}, {mer: 5}, tar, tdate), 5);
-  pr("list price beats the note", pf(named, {}, {}, tar, tdate), 6);
-  pr("note beats the unnamed default", pf(Object.assign({}, unnamed, {ocm: {p: 2, t: "2 SEK/kWh"}}), {}, {"*": 4}, {}, tdate), 2);
-  pr("unnamed default is used last", pf(unnamed, {}, {"*": 4}, {}, tdate), 4);
-  pr("unnamed default does not reach named operators", pf({id: "c", key: "circlek", op: "Circle K", free: false}, {}, {"*": 4}, {}, tdate), -1);
-  pr("operator default does not reach unnamed chargers", pf(unnamed, {}, {mer: 5}, {}, tdate), -1);
-  eq("note '4 SEK/kWh'", pn("4 SEK/kWh"), 4);
-  eq("note 'SEK 2.0/kWh'", pn("SEK 2.0/kWh"), 2);
-  eq("note '2,5 sek / kwh'", pn("2,5 sek / kwh"), 2.5);
-  eq("note with extra words is ignored", pn("4 SEK/kWh for fast chargers") === null ? 1 : 0, 1);
-  eq("per-minute note is ignored", pn("2 SEK/min") === null ? 1 : 0, 1);
-  eq("implausible note is ignored", pn("0.1 SEK/kWh") === null ? 1 : 0, 1);
-
-  // --- recommendation: the rest at home must clear the same minimum gain as everything else ---
   var base = {season: "winter", soc: 20, hold: 15, petrol: 15, hours: 1, kw: 3.6};
-  var ch2 = {id: "x", name: "X", price: 3.9, kw: 22};
-  var weakHome = adv(calc(Object.assign({}, base, {home: 4.9}), ch2), 1);
-  eq("weak home gain: only 'Charge on the road'", weakHome.big === "Charge on the road" ? 1 : 0, 1);
-  var goodHome = adv(calc(Object.assign({}, base, {home: 4.0}), ch2), 1);
-  eq("good home gain: top up on the road, then home", /rest at home/.test(goodHome.big) ? 1 : 0, 1);
-  eq("full battery: do not charge", adv(calc(Object.assign({}, base, {soc: 100, home: 4}), null), 1).big === "Do not charge" ? 1 : 0, 1);
-  eq("tiny gain: HEV mode", adv(calc(Object.assign({}, base, {home: 5.0}), null), 1).big === "Drive in HEV mode" ? 1 : 0, 1);
+  eq("soc below hold counts as hold level", calc(Object.assign({}, base, {soc: 5, home: 5}), null).free, 10.4);
+  eq("full battery has nothing to charge", calc(Object.assign({}, base, {soc: 100, home: 5}), null).free, 0);
+  eq("0.5 h at 3.6 kW is limited by time", calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 0.5, kw: 3.6}, {id: "y", name: "Y", op: "", kw: 22}).road.kwh, 1.8);
+  eq("charger slower than the car sets the power", calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 12, kw: 3.6}, {id: "z", name: "Z", op: "", kw: 2.3}).road.pw, 2.3);
+  eq("unknown charger power: the car's limit", calc(base, {id: "u", name: "U", op: "", kw: 0}).road.pw, 3.6);
+
+  // --- recommendation (petrol 15 -> value 4.98 SEK/kWh, limit 4.68) ---
+  var ch = {id: "x", name: "X", op: "Mer", kw: 22};
+  var good = adv(calc(Object.assign({}, base, {home: 4.0}), ch), 1);
+  yes("good home price: charge at home", good.big === "Charge at home");
+  yes("with a charger: top up only below the home price", /less than 4\.00 SEK\/kWh/.test(good.act));
+  yes("with a charger: the rest at home", /rest at home/.test(good.act));
+  var cheapHome = adv(calc(Object.assign({}, base, {home: 4.9}), ch), 1);
+  yes("weak home gain (0.08): HEV mode", cheapHome.big === "Drive in HEV mode");
+  yes("HEV: road limit is named", /below 4\.68 SEK\/kWh/.test(cheapHome.l2));
+  yes("no charger: points to the map", /Find my location/.test(adv(calc(Object.assign({}, base, {home: 4.0}), null), 1).l2));
+  yes("full battery: do not charge", adv(calc(Object.assign({}, base, {soc: 100, home: 4}), null), 1).big === "Do not charge");
+  yes("home dearer than petrol: HEV mode", adv(calc(Object.assign({}, base, {home: 6}), null), 1).big === "Drive in HEV mode");
 
   document.title = fail ? "FAIL" : "PASS";
   document.getElementById("o").textContent = (fail ? fail + " FAILED\n" : "ALL PASSED\n") + out.join("\n");
