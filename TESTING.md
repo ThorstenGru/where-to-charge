@@ -27,7 +27,7 @@ Write down the real values and change the defaults in `index.html` (or on the pa
 |---|---|---|---|
 | Electric range, full charge, summer | 55 km | | Trip meter on a full charge, mild weather |
 | Electric range, full charge, winter | 42 km | | Same, at -5 to +5 C |
-| Winter consumption | 25 kWh/100 km | | kWh from the socket (wall meter or charger) / km driven |
+| Winter consumption | 25 kWh/100 km (estimated; published sources suggest 27-31, see README) | | kWh from the socket (wall meter or charger) / km driven |
 | Petrol in hybrid mode, winter | 8.3 l/100 km | | Board computer or fill-up |
 
 ## 5. After the November bill
