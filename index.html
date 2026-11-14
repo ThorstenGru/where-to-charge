@@ -99,6 +99,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
 #map{height:300px;border-radius:12px;border:1px solid var(--line);margin-top:8px}
 #map:empty{display:none}
 #chinfo{margin-top:8px;font-size:14px}
+select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 details summary{cursor:pointer;font-weight:700;font-size:14px}
 </style>
 </head>
@@ -149,6 +150,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <h2>Chargers near you (Type 2, AC)</h2>
     <p id="mapmsg" class="small" style="margin:0">After "Use my location" (top of the page) the chargers around you appear on a map. Tap one to select it.</p>
     <div id="map"></div>
+    <div id="chselwrap" hidden>
+      <label class="l" for="chsel" style="margin-top:8px">Or choose a charger from the list (same as tapping the map)</label>
+      <select id="chsel"></select>
+    </div>
     <div id="chinfo"></div>
     <div class="gap"></div>
     <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
@@ -430,7 +435,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     });
   }
   function drawMap(la, lo){
-    if(!window.L){ $("mapmsg").textContent = "The map could not be loaded (offline?). The chargers are still counted: the nearest one is selected."; return; }
+    if(!window.L){
+      // Leaflet is loaded after the page (defer) and may arrive after the data: try again when everything has loaded.
+      if(document.readyState !== "complete"){ window.addEventListener("load", function(){ drawMap(la, lo); }, {once:true}); return; }
+      $("mapmsg").textContent = "The map could not be loaded (offline?). The chargers are still counted: the nearest one is selected."; return;
+    }
     $("mapmsg").textContent = N.ch.length ? "Tap a charger to select it. Orange = charger, green = selected, blue = you." : "No Type 2 charger found near you.";
     if(!MAP.map){
       MAP.map = L.map("map", {zoomControl:true});
@@ -449,14 +458,21 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     MAP.map.fitBounds(L.latLngBounds(pts), {padding:[24, 24], maxZoom:15});
     styleMarkers();
   }
+  function renderChSelect(){
+    var sel = $("chsel");
+    $("chselwrap").hidden = !N.ch.length;
+    sel.innerHTML = '<option value="">No charger (home only)</option>' + N.ch.map(function(c){ return '<option value="' + esc(c.id) + '">' + esc(fmt(c.dist, 1) + " km · " + chLabel(c)) + '</option>'; }).join("");
+    sel.value = S.sel || "";
+  }
   function renderChInfo(){
     var c = selCharger(), el = $("chinfo");
+    if($("chsel").value !== (S.sel || "")){ $("chsel").value = S.sel || ""; }
     if(!N.ch.length){ el.innerHTML = ""; return; }
     el.innerHTML = (c
       ? '<b>' + esc(c.name) + '</b><br>Operator: ' + esc(c.op) + ' · Power: ' + (c.kw ? c.kw + ' kW' : 'unknown') + ' · Connector: Type 2 AC · ' + fmt(c.dist, 1) + ' km away <button class="chip" id="chclear" style="padding:2px 8px;font-size:12px">clear</button>' +
         '<br><span class="small">' + esc(facts(c.pts, c.f, c.yy, new Date().getFullYear()).join(" · ")) + '</span>'
       : 'No charger selected: the comparison uses home only. Tap a charger on the map.') +
-      (N.evsrc ? '<p class="hint">Charger data: ' + esc(N.evsrc.by.join(", ")) + (N.evsrc.gen ? ', file of ' + esc(N.evsrc.gen) : '') + '.</p>' : '');
+      (N.evsrc ? '<p class="hint">Charger data: ' + esc(N.evsrc.by.join(", ")) + (N.evsrc.gen ? ', file of ' + esc(N.evsrc.gen) + (N.evsrc.old ? ' (old: the charger data has not been refreshed for over 3 weeks)' : '') : '') + '.</p>' : '');
   }
 
   function renderPetrols(){
@@ -484,6 +500,19 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     });
   }
 
+  // Chargers around a position, nearest first (pure, tested): one entry per site and operator, Type 2 AC up to 22 kW, the 150 nearest.
+  function buildChargers(ev, la, lo){
+    if(ev.v !== 1){ throw 0; }   // column layout of ev_se.json is only known for version 1
+    var seen = {};
+    return ev.s.map(function(x){
+      var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
+      // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
+      return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
+    }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
+      .sort(function(a, b){ return a.dist - b.dist; }).slice(0, 150);
+  }
+  window.__chargers = buildChargers;   // for tests/calc.test.html
+
   function locate(){
     var msg = $("locmsg");
     msg.textContent = "Finding your location …";
@@ -492,15 +521,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       var la = pos.coords.latitude, lo = pos.coords.longitude;
       msg.textContent = "Loading chargers and petrol prices …";
       Promise.all([getJ("ev_se.json"), getSE()]).then(function(r){
-        var ev = r[0], seen = {};
-        if(ev.v !== 1){ throw 0; }   // column layout of ev_se.json is only known for version 1
-        N.evsrc = {gen:String(ev.generated || ""), by:(ev.sources || []).map(function(n){ return n === "NOBIL" ? "NOBIL by Enova (CC BY 4.0)" : n === "OCM" ? "Open Charge Map contributors (CC BY 4.0)" : String(n); })};
-        N.ch = ev.s.map(function(x){
-          var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
-          // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
-          return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
-        }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
-          .sort(function(a,b){ return a.dist - b.dist; }).slice(0, 150);
+        var ev = r[0];
+        N.evsrc = {old:Date.now() - Date.parse(ev.generated) > 21 * 864e5, gen:String(ev.generated || ""), by:(ev.sources || []).map(function(n){ return n === "NOBIL" ? "NOBIL by Enova (CC BY 4.0)" : n === "OCM" ? "Open Charge Map contributors (CC BY 4.0)" : String(n); })};
+        N.ch = buildChargers(ev, la, lo);
         S.sel = N.ch.length ? N.ch[0].id : null;   // the nearest charger is preselected; tap another on the map or clear it
         var pe = [];
         r[1].stations.forEach(function(s){
@@ -515,7 +538,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the nearest charger are preselected; change them below." +
           (N.ch.length && N.ch[0].dist > 30 ? " Note: the nearest charger is " + fmt(N.ch[0].dist, 0) + " km away." : "");
         if(!N.pe.length){ $("petrols").textContent = "No petrol price within 50 km of you."; }
-        renderPetrols(); syncInputs(); update(); drawMap(la, lo);
+        renderPetrols(); renderChSelect(); syncInputs(); update(); drawMap(la, lo);
       }).catch(function(){ msg.textContent = "Could not load data from eurofuelprices.com."; });
     }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
   }
@@ -545,39 +568,48 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   // Range: low = back to the typical level, high = the excess does not fade. There is no futures price source, so this is a rule of thumb, not a market forecast.
   function spotNote(){ $("monthnote").textContent = "No current spot data. The home price is the built-in default (" + fmt(DEFAULT.home) + " SEK/kWh, based on October). Enter your own price."; }
   var DECAY = 0.7, HIST = ["2023", "2024", "2025"];
+  // Month list for the home price chips (pure, tested). a = SE4 spot data from elpris.json, y = this year, bill = last bill month.
+  function forecast(a, y, bill){
+    var m = a.monthly[String(y)] || [], prev = a.monthly[String(y - 1)] || [], i = m.length - 1;
+    while(i >= 0 && m[i] == null){ i--; }
+    if(i < 0){ return null; }
+    var typ = function(k){
+      var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
+      return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
+    };
+    var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i + 1);
+    var rat = [], k;
+    // the last 3 months; early in the year the missing ones come from the year before (else 1 or 2 days would decide everything)
+    for(k = i - 2; k <= i; k++){ var v = k >= 0 ? m[k] : prev[k + 12], tk = typ((k + 12) % 12); if(v != null && tk > 0){ rat.push(v / tk); } }
+    if(!rat.length){ return null; }
+    var f = Math.min(5, rat.reduce(function(s, x){ return s + x; }, 0) / rat.length);   // capped so one odd month cannot blow up the estimate
+    var list = [];
+    if(bill.year === y && bill.month - 1 < i){ list.push({label:MON[bill.month - 1], spot:bill.spot, kind:"calculated from your bill"}); }
+    var tc = typ(i);
+    if(part && tc > 0){
+      // The bill uses the whole-month average: known days + estimate for the rest of the month.
+      var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
+      list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"estimated (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
+    } else {
+      list.push({label:MON[i], spot:m[i], kind:"calculated from spot average"});
+    }
+    for(k = 1; k <= 3; k++){
+      var mi = (i + k) % 12, t = typ(mi);
+      if(t > 0){ list.push({label:MON[mi], spot:t * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(t), hi:home(t * f), kind:"estimate"}); }
+    }
+    return {months:list.map(function(x){ x.price = home(x.spot); return x; }), f:f, i:i};
+  }
+  window.__forecast = forecast; window.__bill = BILL;   // for tests/calc.test.html
+
   function loadSpot(){
     getJ("elpris.json").then(function(j){
-      var a = j.areas.SE4, y = new Date().getFullYear(), m = a.monthly[String(y)] || [], i = m.length - 1;
-      while(i >= 0 && m[i] == null){ i--; }
-      if(i < 0){ return spotNote(); }
-      var typ = function(k){
-        var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
-        return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
-      };
-      var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i+1);
-      var rat = [], k;
-      for(k = Math.max(0, i-2); k <= i; k++){ if(m[k] != null && typ(k) > 0){ rat.push(m[k] / typ(k)); } }
-      if(!rat.length){ return spotNote(); }
-      var f = Math.min(5, rat.reduce(function(s, x){ return s + x; }, 0) / rat.length);   // capped so one odd month cannot blow up the estimate
-      var list = [];
-      if(BILL.year === y && BILL.month - 1 < i){ list.push({label:MON[BILL.month-1], spot:BILL.spot, kind:"calculated from your bill"}); }
-      var tc = typ(i);
-      if(part && tc > 0){
-        // The bill uses the whole-month average: known days + estimate for the rest of the month.
-        var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
-        list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"estimated (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
-      } else {
-        list.push({label:MON[i], spot:m[i], kind:"calculated from spot average"});
-      }
-      for(k = 1; k <= 3; k++){
-        var mi = (i + k) % 12, t = typ(mi);
-        if(t > 0){ list.push({label:MON[mi], spot:t * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(t), hi:home(t * f), kind:"estimate"}); }
-      }
-      N.months = list.map(function(x){ x.price = home(x.spot); return x; });
-      var cur = N.months.filter(function(x){ return x.label === MON[i]; })[0];
+      var r = forecast(j.areas.SE4, new Date().getFullYear(), BILL);
+      if(!r){ return spotNote(); }
+      N.months = r.months;
+      var cur = N.months.filter(function(x){ return x.label === MON[r.i]; })[0];
       if(!S.homeEdited){ S.home = Math.round(cur.price * 100) / 100; save(); }
-      $("monthnote").textContent = "Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now " + fmt(f, 1) + "x), with that excess fading by 30 % per month. The range runs from \"back to normal\" to \"stays as high as now\". Spot = SE4 monthly average excl. VAT. After the 2027-05-31 discount ends, the home price rises by 0.075." + (new Date() > new Date(HOME_ADD_VALID_TO + "T23:59:59") ? " Warning: the fees in this price come from the October 2026 bills and may be outdated. Update HOME_ADD in the code." : "");
-      renderMonths(); syncInputs(); update();
+      $("monthnote").textContent = "Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now " + fmt(r.f, 1) + "x), with that excess fading by 30 % per month. The range runs from \"back to normal\" to \"stays as high as now\". Spot = SE4 monthly average excl. VAT. After the 2027-05-31 discount ends, the home price rises by 0.075.";
+      syncInputs(); update();
     }).catch(spotNote);
   }
 
@@ -616,6 +648,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var w = [];
     if(S.petrol < 8 || S.petrol > 30){ w.push("Petrol " + fmt(S.petrol) + " SEK/l looks wrong."); }
     if(S.home > 15){ w.push("Home price " + fmt(S.home) + " SEK/kWh looks wrong."); }
+    if(new Date() > new Date(HOME_ADD_VALID_TO + "T23:59:59")){ w.push("The home price uses fees from the October 2026 bills and may be outdated (HOME_ADD in the code)."); }
     $("pricewarn").textContent = w.join(" ");
     $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit is the maximum at stations). It follows the charger you pick on the map.";
   }
@@ -649,6 +682,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
   $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); update(); });
+  $("chsel").addEventListener("change", function(e){ S.sel = e.target.value || null; update(); });
   $("chinfo").addEventListener("click", function(e){ if(e.target.closest("#chclear")){ S.sel = null; update(); } });
   $("loc").addEventListener("click", locate);
 

@@ -6,6 +6,9 @@
 <pre id="o">running ...</pre>
 <iframe src="../index.html" style="display:none"></iframe>
 <script>
+setTimeout(function () {   // if the page never loads, say so instead of staying at "running ..."
+  if (document.title !== "PASS" && document.title !== "FAIL") { document.title = "FAIL"; document.getElementById("o").textContent = "FAILED: the page did not load or the tests did not finish"; }
+}, 8000);
 document.querySelector("iframe").onload = function () {
   var calc = this.contentWindow.__calc, adv = this.contentWindow.__advice, out = [], fail = 0;
   function eq(name, got, want, tol) {
@@ -80,6 +83,39 @@ document.querySelector("iframe").onload = function () {
   yes("12 h is full", tb.at(12, 3.6).full === true);
   yes("0.5 h is not full", tb.at(0.5, 3.6).full === false);
   eq("full charge takes 9.788 / 3.6 h", tb.fillH(3.6), 9.788 / 3.6);
+
+  // --- chargers around a position ---
+  var bc = this.contentWindow.__chargers;
+  var ev = {v: 1, ops: ["(Unknown Operator)", "Mer", "Circle K"], s: [
+    [55.700, 13.2, 2, 22, 2, 0, 0, "Site A"], [55.700, 13.2, 3, 22, 2, 0, 0, "Site A other operator"],
+    [55.700, 13.2, 2, 22, 2, 0, 0, "Site A duplicate"], [55.800, 13.2, 0, 50, 4, 0, 0, "DC charger"],
+    [55.710, 13.2, 1, 0, 1, 0, 0, "Unnamed"], [55.900, 13.2, 2, 11, 1, 0, 0, "Far"]]};
+  var ch = bc(ev, 55.7, 13.2);
+  eq("two operators at one site stay, duplicate and DC are dropped", ch.length, 4);
+  yes("nearest first", ch[0].dist <= ch[1].dist && ch[1].dist <= ch[2].dist && ch[2].dist <= ch[3].dist);
+  yes("ids differ per operator", ch[0].id !== ch[1].id);
+  yes("unnamed operator shown as unknown", ch.filter(function (c) { return c.name === "Unnamed"; })[0].op === "operator unknown");
+  yes("wrong file version throws", (function () { try { bc({v: 2, ops: [], s: []}, 55, 13); } catch (e) { return true; } return false; })());
+  var many = {v: 1, ops: [], s: []};
+  for (var q = 0; q < 200; q++) { many.s.push([55 + q / 1000, 13, 0, 22, 1, 0, 0, "n" + q]); }
+  eq("at most 150 chargers", bc(many, 55, 13).length, 150);
+
+  // --- home price months ---
+  var fcast = this.contentWindow.__forecast, BILL = this.contentWindow.__bill;
+  var typical = {"2023": [1.04, 1.03, .92, .74, .74, 1.03, .42, .5, .51, .36, .85, .8], "2024": [.84, .55, .63, .62, .51, .63, .43, .46, .31, .3, .85, .69], "2025": [.76, 1.04, .61, .58, .6, .41, .46, .73, .71, .71, .81, .65]};
+  var A = Object.assign({}, typical, {"2026": [1.13, 1.13, .85, .67, .95, 1.04, .86, .8, 1.2, 1.57, 3.27, null]});
+  var fc = fcast({monthly: A, partial: {month: "2026-11", days: 10}}, 2026, BILL);
+  yes("months: bill month, this month, 3 estimates", fc.months.map(function (m) { return m.label; }).join() === "Oct,Nov,Dec,Jan,Feb");
+  eq("bill month price from the October bill", fc.months[0].price, 2.875, 0.005);
+  eq("factor from the last 3 months", fc.f, 3.23, 0.05);
+  eq("December estimate", fc.months[2].price, 3.2, 0.05);
+  yes("estimate lies inside its range", fc.months[2].lo < fc.months[2].price && fc.months[2].price < fc.months[2].hi);
+  yes("current month is marked as an estimate", /^estimated/.test(fc.months[1].kind));
+  var Jan = Object.assign({}, typical, {"2026": [1.13, 1.13, .85, .67, .95, 1.04, .86, .8, 1.2, 1.57, 3.27, 3.0], "2027": [0.4]});
+  var fj = fcast({monthly: Jan, partial: {month: "2027-01", days: 2}}, 2027, BILL);
+  yes("early January: the last 3 months include last year", fj.f > 1.5);
+  yes("early January starts with January", fj.months[0].label === "Jan");
+  yes("no data: null", fcast({monthly: {"2026": []}}, 2026, BILL) === null);
 
   document.title = fail ? "FAIL" : "PASS";
   document.getElementById("o").textContent = (fail ? fail + " FAILED\n" : "ALL PASSED\n") + out.join("\n");

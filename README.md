@@ -7,7 +7,8 @@ A phone web page that decides every day: **charge on the road (and top up at hom
 ## Files
 - `index.html`: the whole app (HTML, CSS, JS inline, no build; the only libraries are Leaflet from cdnjs with an integrity hash). Deployed with GitHub Pages from `main`.
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`: install as a home-screen app. No service worker (the page needs live data anyway).
-- `tests/calc.test.html`: tests for the calculation. Open it over http (`python -m http.server`, then `/tests/calc.test.html`, or the same path on the Pages URL). The title says PASS or FAIL.
+- `.github/workflows/tests.yml`: runs the test page in headless Chrome on every push and fails when it does not say ALL PASSED (it reports only; Pages deploys from `main` regardless).
+- `tests/calc.test.html`: tests for the calculation, the recommendation, the charger list, the home price months and the charger facts. Open it over http (`python -m http.server`, then `/tests/calc.test.html`, or the same path on the Pages URL). The title says PASS or FAIL.
 - `TESTING.md`: phone test and calibration checklist.
 
 ## How the page works
@@ -51,9 +52,9 @@ Petrol sources: Motor1 test (7.0 mixed, 8.3 motorway), m3.se cold test, Spritmon
 ### Winter consumption: published evidence (researched 2026-11-14; the page keeps 25 kWh/100 km and 8.3 l/100 km as "estimated")
 - EV Database figures, via [elektrischeauto.nl](https://www.elektrischeauto.nl/?p=49683) (2021 model, 11 kWh usable, "indicative, partly estimated", no data date): real range 36 km in winter (-10 C, heating on) and 46 km in summer (23 C, AC off); consumption 30.6 kWh/100 km winter (city 25.6, highway 36.7) and 23.9 kWh/100 km summer (city 18.3, highway 29.7); WLTP 19 kWh/100 km.
 - Winter test of the 2026 model with the 13.8 kWh battery, [hh-autos.com](https://hh-autos.com/hyundai-santa-fe-phev-im-winter-test-warum-die-e-reichweite-auf-32-km-einbricht/): electric range 32 to 38 km at about 0 C (WLTP 54 km); no consumption figures given.
-- Petrol with an empty battery in the cold: [m3.se](https://www.m3.se/article/1828285/hyundai-santa-fe-phev.html) measured 0.8-0.85 l/mil (8.0-8.5 l/100 km), which fits the 8.3 used here.
-- Not usable for per-km consumption: Spritmonitor logs (for example 13.74 kWh/100 km) average over all km including petrol km.
-- Reading: both seasons look optimistic against these sources (summer 19 = WLTP versus 23.9 real; winter 25 versus 30.6 at -10 C and about 27-32 implied at 0 C). Higher consumption lowers the petrol value per kWh and can flip the recommendation to hybrid mode. Values are unchanged until the owner decides; measure the real figure (see `TESTING.md`).
+- Petrol with an empty battery in the cold: [m3.se](https://www.m3.se/article/1828285/hyundai-santa-fe-phev.html) (2021 model, long drive without usable battery; the cold conditions come from the project's earlier notes, not from the article summary I read) measured 0.8-0.85 l/mil (8.0-8.5 l/100 km), which fits the 8.3 used here.
+- Not usable for per-km consumption: Spritmonitor logs (for example 13.74 kWh/100 km) probably average over all km including petrol km (the logs do not say how the electricity was counted).
+- Reading: both seasons look optimistic against these sources (summer 19 = WLTP versus 23.9 real; winter 25 versus 30.6 at -10 C and about 27-32 implied at 0 C). The 27-32 uses 10.4 kWh usable (the page's basis, from the socket); with the 11 kWh of the EV Database it is 29-34. It is not stated whether the EV Database consumption is measured at the socket or in the battery, so this comparison is only a rough indication. Higher consumption lowers the petrol value per kWh and can flip the recommendation to hybrid mode. Values are unchanged until the owner decides; measure the real figure (see `TESTING.md`).
 
 ## Prices
 - **Petrol** is a daily price, loaded automatically. No forecast. A planned tax change on 1 Dec 2026 is not modelled.

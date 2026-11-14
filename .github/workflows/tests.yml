@@ -1,0 +1,14 @@
+name: Tests
+on: [push, pull_request]
+jobs:
+  calc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the test page in headless Chrome
+        run: |
+          python3 -m http.server 8765 &
+          sleep 2
+          google-chrome --headless=new --no-sandbox --virtual-time-budget=15000 --dump-dom http://localhost:8765/tests/calc.test.html > dom.html
+          # the script text also contains the words, so look at the result element itself
+          grep -q '<pre id="o">ALL PASSED' dom.html || { grep -o '<pre id="o">.*' dom.html | head -20; exit 1; }
