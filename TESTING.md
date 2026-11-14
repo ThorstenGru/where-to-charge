@@ -25,7 +25,6 @@ Write down the real values and change the defaults in `index.html` (or on the pa
 
 | Assumption | Now | Real value | How to measure |
 |---|---|---|---|
-| Hybrid hold level | 15 % | | % on the display when the car runs in hybrid mode |
 | Electric range, full charge, summer | 55 km | | Trip meter on a full charge, mild weather |
 | Electric range, full charge, winter | 42 km | | Same, at -5 to +5 C |
 | Winter consumption | 25 kWh/100 km | | kWh from the socket (wall meter or charger) / km driven |

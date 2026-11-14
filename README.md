@@ -38,7 +38,7 @@ Home and road are limited the same way: time parked x power, never more than the
 
 ## Vehicle and assumptions
 - Hyundai Santa Fe PHEV 1.6 T-GDi, model year 2025, battery 13.8 kWh gross. WLTP electric range 54 km (older sources: 58 km).
-- Usable energy from the socket per full charge: about 10.4 kWh (= 54 km x 0.192 kWh/km), counted between the hybrid hold level (default 15 %, `HOLD_DEFAULT`, not yet read from the car) and 100 %.
+- Usable energy from the socket per full charge: about 10.4 kWh (= 54 km x 0.192 kWh/km), counted between the hybrid hold level (15 %, `HOLD_DEFAULT`: the level at which the car switches to hybrid mode, confirmed by the owner 2026-11-14) and 100 %.
 - AC only, 3.6 kW car limit and 230 V single-phase mains (both confirmed by the owner, 2026-11-14; published sources vary: 3.3 / 3.6 / 3.7 kW). A charger's power only limits it downwards.
 
 | Season | Electric | Petrol in hybrid mode | Range on a full charge |
@@ -61,7 +61,7 @@ Stored settings are validated on start (a bad value falls back to the default, s
 
 ## Known gaps
 1. "Nearest" means straight-line distance, no routing.
-2. Winter range/consumption and the hybrid hold level are not measured yet.
+2. Winter range/consumption is not measured yet.
 3. Petrol prices are crowd data and age quickly. The road price must be read from the charger's app. Parking and idle fees and detours are not in the model.
 4. The page has not been tested on a real phone.
 
