@@ -30,7 +30,6 @@ Write down the real values and change the defaults in `index.html` (or on the pa
 | Electric range, full charge, winter | 42 km | | Same, at -5 to +5 C |
 | Winter consumption | 25 kWh/100 km | | kWh from the socket (wall meter or charger) / km driven |
 | Petrol in hybrid mode, winter | 8.3 l/100 km | | Board computer or fill-up |
-| AC charging power | 3.6 kW | | kWh added in 1 h on a Type 2 charger (also try a 22 kW one) |
 
 ## 5. After the November bill
 - [ ] Compare the real November price per kWh with the estimate (4.06, range 2.97 to 5.00). Note the real value to judge the forecast rule.
