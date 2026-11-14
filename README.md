@@ -33,6 +33,9 @@ road_limit     = value_per_kWh - MIN_GAIN        // highest road price worth pay
 ```
 Decision: the road price is unknown by design, so only home is rated against petrol. Home gain below `MIN_GAIN` (0.30 SEK/kWh), or an almost full battery (< 0.5 kWh free): hybrid mode. Otherwise: charge at home; with a charger chosen the page adds "top up there only if its app shows less than X" with X = min(home price, road_limit). In hybrid mode it names the road limit. Trip mode: electric km = (battery now + charge on site, capped at one full battery) x 100 / kWh per 100 km.
 
+## Time at the charger
+Home and road are limited the same way: time parked x min(car limit, charger power), never more than the room in the battery. Home has its own time (default 10 h, 1-24 h) and charger (2.3 kW household socket, or a wallbox where the car limit decides). The card "Time at the charger" shows km on electricity by time (0.5-12 h plus your two times) for a 2.3 kW socket and for the car limit, and how long a full charge takes. Chargers stronger than the car limit are not faster.
+
 ## Vehicle and assumptions
 - Hyundai Santa Fe PHEV 1.6 T-GDi, model year 2025, battery 13.8 kWh gross. WLTP electric range 54 km (older sources: 58 km).
 - Usable energy from the socket per full charge: about 10.4 kWh (= 54 km x 0.192 kWh/km), counted between the hybrid hold level (default 15 %, `HOLD_DEFAULT`, not yet read from the car) and 100 %.
