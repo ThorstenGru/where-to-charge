@@ -140,7 +140,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   <section class="card">
     <h2>Time at the charger</h2>
-    <p class="hint" style="margin-top:0">How far you get on electricity, by time at the charger and charging power. It is the same at home and on the road. The car has its own limit, so a stronger charger is not faster. Rows marked "road stop" and "at home" are the times you set below.</p>
+    <p class="hint" style="margin-top:0">How far you get on electricity, by time at the charger and charging power. Household sockets are shown at 6 to 16 A (230 V). At stations, and on a wallbox, the car's own limit is the maximum power, so a stronger charger is not faster. Rows marked "road stop" and "at home" are the times you set below.</p>
     <div class="tablewrap"><table id="timetab"></table></div>
     <p id="fillnote" class="hint"></p>
   </section>
@@ -175,11 +175,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <div class="gap"></div>
     <label class="l" for="homehours">Time parked at home (connected to the charger): <b id="homehoursv"></b></label>
     <input id="homehours" type="range" min="1" max="24" step="1">
-    <label class="l" style="margin-top:10px">Home charger</label>
-    <div class="seg" role="group" aria-label="Home charger">
-      <button id="hk23" aria-pressed="false">Household socket 2.3 kW</button>
-      <button id="hk36" aria-pressed="true">Wallbox (car limit)</button>
-    </div>
+    <label class="l" style="margin-top:10px">Home charger: household socket (fuse setting of the cable) or wallbox</label>
+    <div id="homeamps" class="chips"></div>
     <p id="homepw" class="hint"></p>
   </section>
 
@@ -221,6 +218,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 (function(){
   var KEY = "wo-laden-heute-v1";
   var USABLE_KWH = 10.4;
+  var MAINS_V = 230;   // household socket: single phase
+  var AMPS = [6, 8, 10, 12, 16];   // choices for the household socket; 0 = wallbox
   var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
   var HOLD_DEFAULT = 15;   // static default: % on the display where the car holds charge in hybrid mode (changeable in the page)
   var SEASONS = {
@@ -228,13 +227,13 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
   };
   function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
-  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:(new Date().getMonth() >= 9 || new Date().getMonth() <= 2) ? "winter" : "summer", soc:20, hours:1, kw:3.6, trip:0, homeHours:10, homeKw:22};   // homeKw 22 = wallbox: the car limit decides
+  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:(new Date().getMonth() >= 9 || new Date().getMonth() <= 2) ? "winter" : "summer", soc:20, hours:1, kw:3.6, trip:0, homeHours:10, homeAmp:0};   // homeAmp: household socket in A, 0 = wallbox (the car limit decides)
   // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price) are stored only when the user typed them.
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
   try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
   // One odd stored value must never break the page: anything that is not a finite number, or an unknown season, falls back to the default.
-  ["petrol", "home", "soc", "hours", "kw", "trip", "hold", "homeHours", "homeKw"].forEach(function(k){ if(typeof S[k] !== "number" || !isFinite(S[k])){ S[k] = DEFAULT[k]; } });
+  ["petrol", "home", "soc", "hours", "kw", "trip", "hold", "homeHours", "homeAmp"].forEach(function(k){ if(typeof S[k] !== "number" || !isFinite(S[k])){ S[k] = DEFAULT[k]; } });
   if(!SEASONS[S.season]){ S.season = DEFAULT.season; }
   S.soc = Math.min(100, Math.max(0, S.soc));
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
@@ -242,6 +241,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   S.hold = Math.min(60, Math.max(0, +S.hold));
   S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
   S.homeHours = Math.min(24, Math.max(1, S.homeHours));
+  if(S.homeAmp !== 0 && AMPS.indexOf(S.homeAmp) < 0){ S.homeAmp = 0; }
 
   var BASE = "https://eurofuelprices.com/";
   // From the Oct 2026 bills: variable 0.11497 + grid transfer 0.2584 + energy tax 0.36 (SEK/kWh excl. VAT). The 0.06 markup and 0.06 discount cancel until 2027-05-31.
@@ -295,8 +295,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var lPerKwh = se.l / se.el, per = 100 / se.el;
     var value = lPerKwh * st.petrol;   // what 1 kWh is worth in petrol (SEK)
     var free = USABLE_KWH * (100 - Math.max(st.soc, st.hold)) / (100 - st.hold);   // chargeable kWh: the 10.4 kWh span the display range hold..100 %
-    // Home is limited like any charger: time parked x power. Without homeHours/homeKw (old callers, tests) there is no limit.
-    var homePw = Math.min(st.kw, st.homeKw > 0 ? st.homeKw : st.kw), homeKwh = Math.min(free, (st.homeHours > 0 ? st.homeHours : 1e9) * homePw);
+    // Home is limited like any charger: time parked x power. A household socket gives amps x 230 V; the car's limit still applies.
+    // Without homeHours (old callers, tests) there is no time limit.
+    var homePw = Math.min(st.kw, st.homeAmp > 0 ? st.homeAmp * MAINS_V / 1000 : st.kw), homeKwh = Math.min(free, (st.homeHours > 0 ? st.homeHours : 1e9) * homePw);
     var h = {price:st.home, kwh:homeKwh, pw:homePw, net:value - st.home, be:st.home / lPerKwh};
     h.cost = h.kwh * h.price; h.km = h.kwh * per; h.litres = h.kwh * lPerKwh; h.saved = h.kwh * value; h.total = h.net * h.kwh;
     var road = null;
@@ -341,22 +342,25 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }
 
   function tile(cap, big, unit, st, ok){ return '<div class="tile"><div class="cap">' + cap + '</div><div class="big">' + big + '</div><div class="unit">' + unit + '</div><div class="st ' + (ok ? "pos" : "neg") + '">' + st + '</div></div>'; }
-  // Time at the charger -> km on electricity, for a household socket and for the car's own limit.
+  // Time at the charger -> km on electricity: household socket at 6-16 A, and stations (the car's limit is the maximum power).
   var TIMES = [0.5, 1, 2, 3, 4, 6, 8, 10, 12];
   function renderTime(c){
-    var cols = [{t:"2.3 kW socket", p:2.3}, {t:fmt(S.kw, 1) + " kW (car limit)", p:S.kw}], rows = TIMES.slice();
+    var cols = AMPS.map(function(a){ return {t:a + " A", p:a * MAINS_V / 1000, home:S.homeAmp === a}; });
+    cols.push({t:"Station", p:S.kw, home:false});
+    var rows = TIMES.slice();
     [S.hours, S.homeHours].forEach(function(x){ if(rows.indexOf(x) < 0){ rows.push(x); } });
     rows.sort(function(a, b){ return a - b; });
-    var t = '<tr><th>Time</th>' + cols.map(function(k){ return '<th>' + k.t + '</th>'; }).join('') + '</tr>';
+    var t = '<tr><th>Time</th>' + cols.map(function(k){ return '<th>' + k.t + (k.home ? ' (home)' : '') + '<br><span class="small">' + fmt(Math.min(S.kw, k.p), 1) + ' kW</span></th>'; }).join('') + '</tr>';
     rows.forEach(function(h){
       var tag = (c.road && h === S.hours ? " · road stop" : "") + (h === S.homeHours ? " · at home" : "");
       t += '<tr><td>' + fmt(h, h % 1 ? 1 : 0) + ' h<span class="small">' + tag + '</span></td>' + cols.map(function(k){
         var r = c.at(h, k.p);
-        return '<td>' + (r.full ? 'full · ' : '') + fmt(r.km, 0) + ' km<br><span class="small">' + fmt(r.kwh, 1) + ' kWh</span></td>';
+        return '<td>' + (r.full ? 'full<br>' : '') + fmt(r.km, 0) + ' km<br><span class="small">' + fmt(r.kwh, 1) + ' kWh</span></td>';
       }).join('') + '</tr>';
     });
+    t += '<tr><td><b>Full charge</b></td>' + cols.map(function(k){ return '<td>' + fmt(c.fillH(k.p), 1) + ' h<br><span class="small">' + fmt(c.free * c.per, 0) + ' km</span></td>'; }).join('') + '</tr>';
     $("timetab").innerHTML = t;
-    $("fillnote").textContent = "From your battery level a full charge (" + fmt(c.free, 1) + " kWh, " + fmt(c.free * c.per, 0) + " km) takes " + fmt(c.fillH(2.3), 1) + " h at 2.3 kW and " + fmt(c.fillH(S.kw), 1) + " h at " + fmt(S.kw, 1) + " kW. Chargers above the car limit are not faster.";
+    $("fillnote").textContent = "From your battery level, a full charge is " + fmt(c.free, 1) + " kWh (" + fmt(c.free * c.per, 0) + " km). The car's limit is " + fmt(S.kw, 1) + " kW: 16 A (" + fmt(16 * MAINS_V / 1000, 2) + " kW), wallboxes and all stations give the same result.";
   }
 
   function renderBreak(c){
@@ -595,9 +599,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var se = SEASONS[S.season], c = selCharger();
     $("hoursv").textContent = fmt(S.hours, 1) + " h";
     $("homehoursv").textContent = fmt(S.homeHours, 0) + " h";
-    $("hk23").setAttribute("aria-pressed", S.homeKw === 2.3);
-    $("hk36").setAttribute("aria-pressed", S.homeKw !== 2.3);
-    $("homepw").textContent = "Charging power used at home: " + fmt(Math.min(S.kw, S.homeKw), 1) + " kW (the lower of the car's limit and the home charger).";
+    [].forEach.call($("homeamps").children, function(b){ b.setAttribute("aria-pressed", +b.getAttribute("data-a") === S.homeAmp); });
+    $("homepw").textContent = S.homeAmp > 0
+      ? "Charging power used at home: " + fmt(Math.min(S.kw, S.homeAmp * MAINS_V / 1000), 2) + " kW (" + S.homeAmp + " A × " + MAINS_V + " V = " + fmt(S.homeAmp * MAINS_V / 1000, 2) + " kW" + (S.homeAmp * MAINS_V / 1000 > S.kw ? "; the car's limit of " + fmt(S.kw, 1) + " kW applies" : "") + ")."
+      : "Wallbox: the car's limit of " + fmt(S.kw, 1) + " kW is the charging power at home.";
     $("socv").textContent = Math.max(S.soc, S.hold) + " %";
     $("sWinter").setAttribute("aria-pressed", S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.season === "summer");
@@ -612,7 +617,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(S.petrol < 8 || S.petrol > 30){ w.push("Petrol " + fmt(S.petrol) + " SEK/l looks wrong."); }
     if(S.home > 15){ w.push("Home price " + fmt(S.home) + " SEK/kWh looks wrong."); }
     $("pricewarn").textContent = w.join(" ");
-    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit). It follows the charger you pick on the map.";
+    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit is the maximum at stations). It follows the charger you pick on the map.";
   }
 
   function update(){
@@ -634,8 +639,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
   $("homehours").addEventListener("input", function(e){ S.homeHours = num(e.target.value, 10); save(); update(); });
-  $("hk23").addEventListener("click", function(){ S.homeKw = 2.3; save(); update(); });
-  $("hk36").addEventListener("click", function(){ S.homeKw = 22; save(); update(); });
+  AMPS.concat([0]).forEach(function(a){
+    var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-a", a);
+    b.textContent = a ? a + " A (" + fmt(a * MAINS_V / 1000, 2) + " kW)" : "Wallbox";
+    b.addEventListener("click", function(){ S.homeAmp = a; save(); update(); });
+    $("homeamps").appendChild(b);
+  });
   $("hold").addEventListener("input", function(e){ S.hold = Math.min(60, Math.max(0, num(e.target.value, 0))); S.holdEdited = true; $("soc").min = S.hold; save(); update(); });
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
