@@ -9,16 +9,19 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Add to Home Screen. The green lightning-bolt icon appears and the app opens full screen.
 - [ ] Rotate / scroll: no horizontal scrolling, nothing cut off, dark mode readable.
 
-## 2. Automatic data (2 min)
+## 2. Automatic data and languages (5 min)
 - [ ] Petrol shows "daily price, loaded automatically" with a recent date and a plausible price (check against a pump you know).
-- [ ] Home electricity shows month chips: October "calculated from your bill" = 2.88, November estimated.
+- [ ] Home electricity: the month chips show last month, this month (estimated) and three estimates. Switch the price area (SE1-SE4) and the contract (monthly, hourly, fixed): the text and price follow.
+- [ ] Switch the language EN, DE, SV: every text changes, nothing is cut off, decimals use a comma in DE and SV. Report translation mistakes.
+- [ ] Switch the car type to the electric car: there is no hybrid mode, the petrol card says it is the comparison car.
 - [ ] Airplane mode: the page still opens and warns about missing data instead of breaking.
 
 ## 3. Use my location (5 min)
 - [ ] Tap "Use my location", allow access. Five petrol stations appear and the map shows chargers around you.
 - [ ] The nearest petrol station and charger are really near you (compare with a maps app).
 - [ ] Pick a petrol station: the petrol price above changes to it.
-- [ ] Tap a charger on the map: details (operator, power, Type 2 AC) appear and the recommendation names the highest road price worth paying. Compare it with the price in the charger's app.
+- [ ] Tap a charger on the map (or choose it in the list): details appear and the recommendation names the highest road price worth paying. Compare it with the price in the charger's app. "Navigate" opens the route, "Find the price" a web search.
+- [ ] Switch on the outside temperature (opt-in): the season note shows the temperature.
 
 ## 4. Calibrate the assumptions (over 2-3 weeks)
 Write down the real values and change the defaults in `index.html` (or on the page) if they differ.
@@ -30,9 +33,9 @@ Write down the real values and change the defaults in `index.html` (or on the pa
 | Winter consumption | 25 kWh/100 km (estimated; see README for published figures and their basis) | | kWh from the socket (wall meter or charger) / km driven |
 | Petrol in hybrid mode, winter | 8.3 l/100 km | | Board computer or fill-up |
 
-## 5. After the November bill
-- [ ] Note the November estimate the page shows shortly before the bill arrives (it changes every day), then compare it with the real price per kWh to judge the forecast rule.
-- [ ] Add the new monthly spot average to `BILL` in `index.html` if you want the bill month shown as "calculated from your bill".
+## 5. Use it for a few weeks
+- [ ] Log each charge in "Measure your real consumption" (kWh at the socket, electric km since the last charge). After 20+ km per season, use the result as the car's value.
+- [ ] Note the monthly price estimate the page shows shortly before the bill arrives (it changes every day), then compare it with the real price per kWh to judge the forecast rule.
 
 ## Report back
 Note anything that looks wrong (screenshot + what you expected) and send it to Claude.

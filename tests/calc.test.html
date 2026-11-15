@@ -4,55 +4,94 @@
 <body style="font-family:monospace">
 <!-- Open over http (local server or the Pages URL): the iframe must be same-origin. -->
 <pre id="o">running ...</pre>
-<iframe src="../index.html" style="display:none"></iframe>
+<iframe src="../index.html?lang=en" style="display:none"></iframe>
 <script>
 setTimeout(function () {   // if the page never loads, say so instead of staying at "running ..."
   if (document.title !== "PASS" && document.title !== "FAIL") { document.title = "FAIL"; document.getElementById("o").textContent = "FAILED: the page did not load or the tests did not finish"; }
 }, 8000);
 document.querySelector("iframe").onload = function () {
-  var calc = this.contentWindow.__calc, adv = this.contentWindow.__advice, out = [], fail = 0;
+  var W = this.contentWindow, calc = W.__calc, adv = W.__advice, out = [], fail = 0;
   function eq(name, got, want, tol) {
     var ok = Math.abs(got - want) <= (tol || 0.01);
     if (!ok) fail++;
     out.push((ok ? "PASS " : "FAIL ") + name + ": got " + got + ", want " + want);
   }
   function yes(name, cond) { eq(name, cond ? 1 : 0, 1); }
+  var P = W.__presets;
+  // state of a car preset (default: Hyundai Santa Fe: 10.4 kWh usable, 3.6 kW, hold 15 %, 25 kWh/100 km and 8.3 l/100 km in winter)
+  function mk(over, car) { car = car || "santafe"; return Object.assign({car: car, cv: Object.assign({}, P[car].v), season: "winter", soc: 20, petrol: 15, home: 5, hours: 1}, over); }
 
-  // --- calculation: winter, battery 20 %, hold 15 %, petrol 15.74, home 5.00, 3 h, car 3.6 kW, charger 22 kW ---
-  var st = {season: "winter", soc: 20, hold: 15, petrol: 15.74, home: 5, hours: 3, kw: 3.6};
-  var c = calc(st, {id: "x", name: "X", op: "Mer", kw: 22});
+  // --- calculation: winter, battery 20 %, petrol 15.74, home 5.00, 3 h, charger 22 kW ---
+  var c = calc(mk({petrol: 15.74, home: 5, hours: 3}), {id: "x", name: "X", op: "Mer", kw: 22});
   eq("free kWh (10.4 * 80/85)", c.free, 9.788);
   eq("home kWh = free kWh", c.home.kwh, 9.788);
   eq("home total SEK", c.home.total, 2.21);
-  eq("home petrol break-even", c.home.be, 15.06);
+  eq("petrol break-even home", c.home.be, 15.06);
   eq("electricity break-even (value per kWh)", c.value, 5.2257);
   eq("worth-the-effort limit", c.limit, 5.2257 - 0.3);
   eq("road kWh (battery room is the limit)", c.road.kwh, 9.788);
   eq("road petrol value SEK", c.road.saved, 51.15);
-  eq("no charger: no road option", calc(st, null).road === null ? 1 : 0, 1);
+  eq("no charger: no road option", calc(mk({}), null).road === null ? 1 : 0, 1);
+  eq("soc below hold counts as hold level", calc(mk({soc: 5}), null).free, 10.4);
+  eq("full battery has nothing to charge", calc(mk({soc: 100}), null).free, 0);
+  eq("0.5 h at 3.6 kW is limited by time", calc(mk({season: "summer", hours: 0.5}), {id: "y", name: "Y", op: "", kw: 22}).road.kwh, 1.8);
+  eq("charger slower than the car sets the power", calc(mk({season: "summer", hours: 12}), {id: "z", name: "Z", op: "", kw: 2.3}).road.pw, 2.3);
+  eq("unknown charger power: the car's limit", calc(mk({}), {id: "u", name: "U", op: "", kw: 0}).road.pw, 3.6);
 
-  var base = {season: "winter", soc: 20, hold: 15, petrol: 15, hours: 1, kw: 3.6};
-  eq("soc below hold counts as hold level", calc(Object.assign({}, base, {soc: 5, home: 5}), null).free, 10.4);
-  eq("full battery has nothing to charge", calc(Object.assign({}, base, {soc: 100, home: 5}), null).free, 0);
-  eq("0.5 h at 3.6 kW is limited by time", calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 0.5, kw: 3.6}, {id: "y", name: "Y", op: "", kw: 22}).road.kwh, 1.8);
-  eq("charger slower than the car sets the power", calc({season: "summer", soc: 20, hold: 15, petrol: 15, home: 5, hours: 12, kw: 3.6}, {id: "z", name: "Z", op: "", kw: 2.3}).road.pw, 2.3);
-  eq("unknown charger power: the car's limit", calc(base, {id: "u", name: "U", op: "", kw: 0}).road.pw, 3.6);
+  // --- car types and consumption ---
+  eq("preset BEV usable kWh", calc(mk({soc: 0}, "bev"), null).free, 55);
+  eq("BEV: 11 kW car limit, wallbox", calc(mk({homeHours: 1, homeAmp: 0}, "bev"), null).home.pw, 11);
+  yes("BEV is a bev", calc(mk({}, "bev"), null).type === "bev");
+  yes("Santa Fe is a phev", calc(mk({}), null).type === "phev");
+  var cons = W.__consumption;
+  eq("20 C and warmer: summer value", cons(mk({temp: 20})).el, 19);
+  eq("0 C: winter value", cons(mk({temp: 0})).el, 25);
+  eq("10 C: halfway", cons(mk({temp: 10})).el, 22);
+  eq("-10 C: rises further (1.5x the span)", cons(mk({temp: -10})).el, 28);
+  eq("-30 C: capped at -10 C", cons(mk({temp: -30})).el, 28);
+  eq("no temperature: season value", cons(mk({season: "summer"})).l, 7);
+  yes("all presets have a number for every value", Object.keys(P).every(function (k) { return Object.keys(P[k].v).length === 7 && Object.keys(P[k].v).every(function (n) { return typeof P[k].v[n] === "number" && isFinite(P[k].v[n]); }); }));
 
   // --- recommendation (petrol 15 -> value 4.98 SEK/kWh, limit 4.68) ---
   var ch = {id: "x", name: "X", op: "Mer", kw: 22};
-  var good = adv(calc(Object.assign({}, base, {home: 4.0}), ch), 1);
+  var good = adv(calc(mk({home: 4.0}), ch), 1);
   yes("good home price: charge at home", good.big === "Charge at home");
   yes("with a charger: top up only below the home price", /less than 4\.00 SEK\/kWh/.test(good.act));
   yes("with a charger: the rest at home", /rest at home/.test(good.act));
-  var cheapHome = adv(calc(Object.assign({}, base, {home: 4.9}), ch), 1);
+  var cheapHome = adv(calc(mk({home: 4.9}), ch), 1);
   yes("weak home gain (0.08): HEV mode", cheapHome.big === "Drive in HEV mode");
   yes("HEV: road limit is named", /below 4\.68 SEK\/kWh/.test(cheapHome.l2));
-  yes("no charger: points to the map", /Use my location/.test(adv(calc(Object.assign({}, base, {home: 4.0}), null), 1).l2));
-  yes("full battery: do not charge", adv(calc(Object.assign({}, base, {soc: 100, home: 4}), null), 1).big === "Do not charge");
-  yes("home dearer than petrol: HEV mode", adv(calc(Object.assign({}, base, {home: 6}), null), 1).big === "Drive in HEV mode");
+  yes("no charger: points to the map", /Use my location/.test(adv(calc(mk({home: 4.0}), null), 1).l2));
+  yes("full battery: do not charge", adv(calc(mk({soc: 100, home: 4}), null), 1).big === "Do not charge");
+  yes("home dearer than petrol: HEV mode", adv(calc(mk({home: 6}), null), 1).big === "Drive in HEV mode");
+  // BEV: there is no hybrid mode, the question is only where to charge
+  var bevGood = adv(calc(mk({petrol: 15, home: 2, soc: 30}, "bev"), ch), 1);
+  yes("BEV: charge at home", bevGood.big === "Charge at home");
+  yes("BEV: top up on the road only below the home price", /less than 2\.00 SEK\/kWh/.test(bevGood.act));
+  var bevDear = adv(calc(mk({petrol: 15, home: 6, soc: 30}, "bev"), null), 1);
+  yes("BEV never says hybrid mode, even when electricity is dear", bevDear.big === "Charge at home" && /petrol car/.test(bevDear.l2));
+  yes("BEV with a full battery: nothing to charge", adv(calc(mk({soc: 100}, "bev"), null), 1).big === "Nothing to charge");
+
+  // --- time at the charger: household socket by amps, wallbox = car limit ---
+  var hm = function (amp, hrs) { return calc(mk({home: 4, homeHours: hrs, homeAmp: amp}), null).home.kwh; };
+  eq("home 10 A socket, 1 h: 2.3 kWh", hm(10, 1), 2.3);
+  eq("home 6 A socket, 1 h: 1.38 kWh", hm(6, 1), 1.38);
+  eq("home 8 A socket, 1 h: 1.84 kWh", hm(8, 1), 1.84);
+  eq("home 12 A socket, 1 h: 2.76 kWh", hm(12, 1), 2.76);
+  eq("home 16 A socket (3.68 kW): the car limit 3.6 kW decides", hm(16, 1), 3.6);
+  eq("home wallbox (0 A = car limit): 3.6 kWh in 1 h", hm(0, 1), 3.6);
+  eq("home 10 A socket, 10 h: limited by the battery", hm(10, 10), 9.788);
+  var tb = calc(mk({home: 4}), null);
+  eq("no homeHours given: no time limit at home", tb.home.kwh, 9.788);
+  eq("1 h at 3.6 kW gives 14.4 km", tb.at(1, 3.6).km, 14.4);
+  eq("1 h at 2.3 kW gives 9.2 km", tb.at(1, 2.3).km, 9.2);
+  eq("22 kW charger is limited to the car's 3.6 kW", tb.at(1, 22).kwh, 3.6);
+  yes("12 h is full", tb.at(12, 3.6).full === true);
+  yes("0.5 h is not full", tb.at(0.5, 3.6).full === false);
+  eq("full charge takes 9.788 / 3.6 h", tb.fillH(3.6), 9.788 / 3.6);
 
   // --- charger facts from the data flags ---
-  var facts = this.contentWindow.__facts;
+  var facts = W.__facts;
   function has(name, list, part) { yes(name, list.join("|").indexOf(part) >= 0); }
   var all = facts(4, 64 | 2 | 4 | 8 | 128 | 1, 24, 2026);
   has("points", all, "4 points"); has("fixed cable", all, "fixed cable"); has("card", all, "card or membership");
@@ -66,56 +105,76 @@ document.querySelector("iframe").onload = function () {
   yes("no fixed-cable claim without the flag", facts(2, 2, 25, 2026).join("|").indexOf("cable") < 0);
   yes("parking hint only as unverified", facts(2, 16, 25, 2026).join("|").indexOf("(unverified)") > 0);
 
-  // --- time at the charger ---
-  var tb = calc(Object.assign({}, base, {home: 4}), null);   // winter: 4 km per kWh, free 9.788 kWh
-  eq("no homeHours given: no time limit at home", tb.home.kwh, 9.788);
-  var hm = function(amp, hrs) { return calc(Object.assign({}, base, {home: 4, homeHours: hrs, homeAmp: amp}), null).home.kwh; };
-  eq("home 10 A socket, 1 h: 2.3 kWh", hm(10, 1), 2.3);
-  eq("home 6 A socket, 1 h: 1.38 kWh", hm(6, 1), 1.38);
-  eq("home 8 A socket, 1 h: 1.84 kWh", hm(8, 1), 1.84);
-  eq("home 12 A socket, 1 h: 2.76 kWh", hm(12, 1), 2.76);
-  eq("home 16 A socket (3.68 kW): the car limit 3.6 kW decides", hm(16, 1), 3.6);
-  eq("home wallbox (0 A = car limit): 3.6 kWh in 1 h", hm(0, 1), 3.6);
-  eq("home 10 A socket, 10 h: limited by the battery", hm(10, 10), 9.788);
-  eq("1 h at 3.6 kW gives 14.4 km", tb.at(1, 3.6).km, 14.4);
-  eq("1 h at 2.3 kW gives 9.2 km", tb.at(1, 2.3).km, 9.2);
-  eq("22 kW charger is limited to the car's 3.6 kW", tb.at(1, 22).kwh, 3.6);
-  yes("12 h is full", tb.at(12, 3.6).full === true);
-  yes("0.5 h is not full", tb.at(0.5, 3.6).full === false);
-  eq("full charge takes 9.788 / 3.6 h", tb.fillH(3.6), 9.788 / 3.6);
-
   // --- chargers around a position ---
-  var bc = this.contentWindow.__chargers;
+  var bc = W.__chargers;
   var ev = {v: 1, ops: ["(Unknown Operator)", "Mer", "Circle K"], s: [
     [55.700, 13.2, 2, 22, 2, 0, 0, "Site A"], [55.700, 13.2, 3, 22, 2, 0, 0, "Site A other operator"],
     [55.700, 13.2, 2, 22, 2, 0, 0, "Site A duplicate"], [55.800, 13.2, 0, 50, 4, 0, 0, "DC charger"],
     [55.710, 13.2, 1, 0, 1, 0, 0, "Unnamed"], [55.900, 13.2, 2, 11, 1, 0, 0, "Far"]]};
-  var ch = bc(ev, 55.7, 13.2);
-  eq("two operators at one site stay, duplicate and DC are dropped", ch.length, 4);
-  yes("nearest first", ch[0].dist <= ch[1].dist && ch[1].dist <= ch[2].dist && ch[2].dist <= ch[3].dist);
-  yes("ids differ per operator", ch[0].id !== ch[1].id);
-  yes("unnamed operator shown as unknown", ch.filter(function (c) { return c.name === "Unnamed"; })[0].op === "operator unknown");
+  var chs = bc(ev, 55.7, 13.2);
+  eq("two operators at one site stay, duplicate and DC are dropped", chs.length, 4);
+  yes("nearest first", chs[0].dist <= chs[1].dist && chs[1].dist <= chs[2].dist && chs[2].dist <= chs[3].dist);
+  yes("ids differ per operator", chs[0].id !== chs[1].id);
+  yes("unnamed operator shown as unknown", chs.filter(function (x) { return x.name === "Unnamed"; })[0].op === "operator unknown");
   yes("wrong file version throws", (function () { try { bc({v: 2, ops: [], s: []}, 55, 13); } catch (e) { return true; } return false; })());
   var many = {v: 1, ops: [], s: []};
   for (var q = 0; q < 200; q++) { many.s.push([55 + q / 1000, 13, 0, 22, 1, 0, 0, "n" + q]); }
   eq("at most 150 chargers", bc(many, 55, 13).length, 150);
 
-  // --- home price months ---
-  var fcast = this.contentWindow.__forecast, BILL = this.contentWindow.__bill;
+  // --- home price months (fees on top of the spot price: 0.73337) ---
+  var fcast = W.__forecast, ADD = 0.73337;
   var typical = {"2023": [1.04, 1.03, .92, .74, .74, 1.03, .42, .5, .51, .36, .85, .8], "2024": [.84, .55, .63, .62, .51, .63, .43, .46, .31, .3, .85, .69], "2025": [.76, 1.04, .61, .58, .6, .41, .46, .73, .71, .71, .81, .65]};
   var A = Object.assign({}, typical, {"2026": [1.13, 1.13, .85, .67, .95, 1.04, .86, .8, 1.2, 1.57, 3.27, null]});
-  var fc = fcast({monthly: A, partial: {month: "2026-11", days: 10}}, 2026, BILL);
-  yes("months: bill month, this month, 3 estimates", fc.months.map(function (m) { return m.label; }).join() === "Oct,Nov,Dec,Jan,Feb");
-  eq("bill month price from the October bill", fc.months[0].price, 2.875, 0.005);
+  var fc = fcast({monthly: A, partial: {month: "2026-11", days: 10}}, 2026, ADD);
+  yes("months: last month, this month, 3 estimates", fc.months.map(function (m) { return m.idx; }).join() === "9,10,11,0,1");
+  eq("last month price (1.57 + fees) x 1.25", fc.months[0].price, 2.879, 0.01);
   eq("factor from the last 3 months", fc.f, 3.23, 0.05);
   eq("December estimate", fc.months[2].price, 3.2, 0.05);
   yes("estimate lies inside its range", fc.months[2].lo < fc.months[2].price && fc.months[2].price < fc.months[2].hi);
-  yes("current month is marked as an estimate", /^estimated/.test(fc.months[1].kind));
+  yes("current month is marked as an estimate", fc.months[1].kk === "kindEst");
+  eq("other fees change the price", fcast({monthly: A, partial: {month: "2026-11", days: 10}}, 2026, 0.5).months[0].price, (1.57 + 0.5) * 1.25, 0.01);
   var Jan = Object.assign({}, typical, {"2026": [1.13, 1.13, .85, .67, .95, 1.04, .86, .8, 1.2, 1.57, 3.27, 3.0], "2027": [0.4]});
-  var fj = fcast({monthly: Jan, partial: {month: "2027-01", days: 2}}, 2027, BILL);
+  var fj = fcast({monthly: Jan, partial: {month: "2027-01", days: 2}}, 2027, ADD);
   yes("early January: the last 3 months include last year", fj.f > 1.5);
-  yes("early January starts with January", fj.months[0].label === "Jan");
-  yes("no data: null", fcast({monthly: {"2026": []}}, 2026, BILL) === null);
+  yes("early January: December is last month, then January", fj.months[0].idx === 11 && fj.months[1].idx === 0);
+  yes("no data: null", fcast({monthly: {"2026": []}}, 2026, ADD) === null);
+
+  // --- hourly contract ---
+  var cheap = W.__cheapest, now = new Date(2026, 10, 15, 20, 0, 0);
+  var day = []; for (var h = 0; h < 24; h++) { day.push(h + 1); }
+  var tom = []; for (h = 0; h < 24; h++) { tom.push(h === 3 ? 0.1 : h === 4 ? 0.2 : 5); }
+  var hr = cheap({today: {date: "2026-11-15", sek: day}, tomorrow: {date: "2026-11-16", sek: tom}}, now, 2);
+  eq("two cheapest hours: average", hr.avg, 0.15);
+  yes("two cheapest hours: 03:00 and 04:00", hr.hours.join() === "03:00,04:00");
+  yes("without tomorrow only the rest of today", cheap({today: {date: "2026-11-15", sek: day}, tomorrow: null}, now, 1).hours.join() === "20:00");
+  yes("stale data: null", cheap({today: {date: "2026-11-14", sek: day}, tomorrow: null}, now, 2) === null);
+  eq("asking for more hours than exist uses all of them", cheap({today: {date: "2026-11-15", sek: day}, tomorrow: null}, now, 10).hours.length, 4);
+
+  // --- consumption log, tomorrow's distance, year ---
+  var ls = W.__logStats([{kwh: 5, km: 20, s: "winter"}, {kwh: 7, km: 30, s: "winter"}, {kwh: 3, km: 10, s: "summer"}]);
+  eq("winter: 12 kWh over 50 km = 24 kWh/100 km", ls.winter.per100, 24);
+  yes("summer: under 20 km, no value yet", ls.summer.per100 === null);
+  var tc = calc(mk({home: 4, soc: 20}), null); tc.soc = 20;
+  var tm = W.__tomorrow;
+  yes("2 km are covered by the battery", tm(tc, 2).enough === true);
+  eq("10 km need 2.5 kWh", tm(tc, 10).need, 2.5);
+  eq("10 km: charge 2.5 - 0.612 kWh", tm(tc, 10).short, 1.888, 0.01);
+  yes("60 km is more than a full battery", tm(tc, 60).tooLong === true);
+  eq("60 km: charge to full", tm(tc, 60).short, 9.788, 0.01);
+  var yr = W.__yearly(mk({home: 4, homeHours: 10}), 5);
+  eq("year: 5 x 26 x 2 full charges of 10.4 kWh", yr.kwh, 2704, 1);
+  eq("year: saving in SEK", yr.sek, 3388, 5);
+
+  // --- texts: every key has all three languages, the same placeholders, and every key used in the page exists ---
+  var TX = W.__tx, bad = [];
+  Object.keys(TX).forEach(function (k) {
+    var row = TX[k], ph = function (s) { return (s.match(/\{\w+\}/g) || []).sort().join(","); };
+    if (row.length !== 3 || row.some(function (s) { return typeof s !== "string" || !s; }) || ph(row[0]) !== ph(row[1]) || ph(row[0]) !== ph(row[2])) { bad.push(k); }
+  });
+  yes("all texts in en/de/sv with the same placeholders" + (bad.length ? " (" + bad.join(",") + ")" : ""), bad.length === 0);
+  var missing = [].map.call(W.document.querySelectorAll("[data-i18n]"), function (e) { return e.getAttribute("data-i18n"); }).filter(function (k) { return !TX[k]; });
+  yes("every data-i18n key exists" + (missing.length ? " (" + missing.join(",") + ")" : ""), missing.length === 0);
+  yes("English is the default under ?lang=en", W.document.documentElement.lang === "en");
 
   document.title = fail ? "FAIL" : "PASS";
   document.getElementById("o").textContent = (fail ? fail + " FAILED\n" : "ALL PASSED\n") + out.join("\n");

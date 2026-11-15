@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Where to charge">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src https://eurofuelprices.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src https://eurofuelprices.com https://api.open-meteo.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous"></script>
 <style>
@@ -41,7 +41,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   font-size:16px;line-height:1.45}
 main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
-h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:4px 0 14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0}
 h2{font-size:15px;font-weight:700;margin:0 0 10px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .verdict{border-radius:16px;padding:18px 16px;margin-bottom:12px;border:4px solid currentColor}
@@ -64,6 +65,9 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{flex:1;font:inherit;padding:10px;background:var(--bg);color:var(--ink);border:0;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:700}
+.langs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.langs button{font:inherit;font-size:13px;padding:6px 10px;background:var(--surface);color:var(--ink);border:0;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:700}
 .chips{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
   background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
@@ -87,10 +91,8 @@ input[type="range"]{width:100%;accent-color:var(--remote)}
 .tile .unit{font-size:13px;color:var(--muted)}
 .tile .st{font-size:13px;font-weight:700;margin-top:4px}
 .cmp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
-.cmp.best{border:2px solid var(--remote)}
 .cmp h3{font-size:15px;margin:0 0 4px;display:flex;justify-content:space-between;gap:8px}
 .cmp p{margin:3px 0;font-size:14px}
-.badge{font-size:12px;font-weight:700;color:var(--remote);white-space:nowrap}
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}
 th,td{text-align:right;padding:4px 6px;border-top:1px solid var(--line);white-space:nowrap}
@@ -99,19 +101,29 @@ th{font-weight:600;color:var(--muted);border-top:0}
 #map{height:300px;border-radius:12px;border:1px solid var(--line);margin-top:8px}
 #map:empty{display:none}
 #chinfo{margin-top:8px;font-size:14px}
+a{color:var(--home)}
 select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin-top:10px}
+.check input{width:20px;height:20px;margin-top:1px;accent-color:var(--remote)}
 details summary{cursor:pointer;font-weight:700;font-size:14px}
 </style>
 </head>
 <body>
 <main>
-  <h1>Where to charge today?</h1>
+  <div class="top">
+    <h1 data-i18n="title">Where to charge today?</h1>
+    <div class="langs" id="langs" role="group" aria-label="Language">
+      <button data-l="en" aria-pressed="true">EN</button>
+      <button data-l="de" aria-pressed="false">DE</button>
+      <button data-l="sv" aria-pressed="false">SV</button>
+    </div>
+  </div>
 
   <!-- 0. Location first: it sets the petrol price and the chargers, which the recommendation depends on -->
   <section class="card">
-    <h2>Where are you?</h2>
-    <button id="loc" class="chip primary">Use my location</button>
-    <p id="locmsg" class="small" style="margin:8px 0 0">Your location sets the petrol price and shows the chargers around you. It stays on your phone; only the map tiles reveal the area to OpenStreetMap.</p>
+    <h2 data-i18n="locTitle">Where are you?</h2>
+    <button id="loc" class="chip primary" data-i18n="locBtn">Use my location</button>
+    <p id="locmsg" class="small" style="margin:8px 0 0"></p>
   </section>
 
   <!-- 1. Answer -->
@@ -119,311 +131,753 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   <p id="pricewarn" class="hint" style="color:var(--neg);font-weight:700;margin:0 0 12px"></p>
 
   <section class="card">
-    <h2>Break-even: where charging and petrol cost the same</h2>
+    <h2 data-i18n="beTitle">Break-even</h2>
     <div id="be"></div>
-    <p class="hint">Left: charging stops paying when petrol gets cheaper than this. Right: petrol becomes the cheaper choice when electricity gets more expensive than this. Both are the same tipping point, once in petrol terms, once in electricity terms. On the road the page does not know the price: it shows the highest price worth paying, and you compare it with the price in the charger's app.</p>
+    <p class="hint" data-i18n="beHint"></p>
   </section>
 
-  <!-- 2. What you can adjust: car, chargers, petrol, home, trip -->
+  <!-- 2. What you can adjust -->
   <section class="card">
-    <h2>Your car</h2>
-    <label class="l" for="soc">Battery level (as shown in the car): <b id="socv"></b></label>
-    <input id="soc" type="range" min="0" max="100" step="5">
-    <p class="hint">Only the charge above the hybrid hold level can be recharged (about 10.4 kWh from the socket). The hold level is set under "Car settings and assumptions" at the bottom.</p>
+    <h2 data-i18n="carTitle">Your car</h2>
+    <label class="l" for="car" data-i18n="carLabel">Car type</label>
+    <select id="car"></select>
     <div class="gap"></div>
-    <label class="l">Season</label>
+    <label class="l" for="soc"><span data-i18n="socLabel">Battery level</span>: <b id="socv"></b></label>
+    <input id="soc" type="range" min="0" max="100" step="5">
+    <p class="hint" id="sochint"></p>
+    <div class="gap"></div>
+    <label class="l" data-i18n="season">Season</label>
     <div class="seg" role="group" aria-label="Season">
-      <button id="sWinter" aria-pressed="true">Winter</button>
-      <button id="sSummer" aria-pressed="false">Summer</button>
+      <button id="sWinter" aria-pressed="true" data-i18n="winter">Winter</button>
+      <button id="sSummer" aria-pressed="false" data-i18n="summer">Summer</button>
     </div>
+    <label class="check"><input type="checkbox" id="usetemp"><span data-i18n="useTemp"></span></label>
     <p id="seasonnote" class="hint"></p>
   </section>
 
   <section class="card">
-    <h2>Time at the charger</h2>
-    <p class="hint" style="margin-top:0">How far you get on electricity, by time at the charger and charging power. Household sockets are shown at 6 to 16 A (230 V). At stations, and on a wallbox, the car's own limit is the maximum power, so a stronger charger is not faster. Rows marked "road stop" and "at home" are the times you set below.</p>
+    <h2 data-i18n="timeTitle">Time at the charger</h2>
+    <p class="hint" style="margin-top:0" data-i18n="timeHint"></p>
     <div class="tablewrap"><table id="timetab"></table></div>
     <p id="fillnote" class="hint"></p>
   </section>
 
   <section class="card">
-    <h2>Chargers near you (Type 2, AC)</h2>
-    <p id="mapmsg" class="small" style="margin:0">After "Use my location" (top of the page) the chargers around you appear on a map. Tap one to select it.</p>
+    <h2 data-i18n="chTitle">Chargers near you (Type 2, AC)</h2>
+    <p id="mapmsg" class="small" style="margin:0"></p>
     <div id="map"></div>
     <div id="chselwrap" hidden>
-      <label class="l" for="chsel" style="margin-top:8px">Or choose a charger from the list (same as tapping the map)</label>
+      <label class="l" for="chsel" style="margin-top:8px" data-i18n="chSelLabel"></label>
       <select id="chsel"></select>
     </div>
     <div id="chinfo"></div>
     <div class="gap"></div>
-    <label class="l" for="hours">Time parked at the charger: <b id="hoursv"></b></label>
+    <label class="l" for="hours"><span data-i18n="hoursLabel">Time parked at the charger</span>: <b id="hoursv"></b></label>
     <input id="hours" type="range" min="0.5" max="12" step="0.5">
     <p id="pwnote" class="hint"></p>
   </section>
 
   <section class="card">
-    <h2>Petrol (daily price)</h2>
-    <label class="l" for="petrol">Petrol 95 (SEK/l), loaded automatically</label>
+    <h2 id="petTitle" data-i18n="petTitle">Petrol (daily price)</h2>
+    <label class="l" for="petrol" data-i18n="petLabel"></label>
     <input id="petrol" type="text" inputmode="decimal" autocomplete="off">
     <p id="petrolsrc" class="hint"></p>
-    <div id="petrols" class="small" style="margin-top:8px">After "Use my location" the 5 nearest petrol stations appear here. Pick one and its price replaces the price above.</div>
+    <div id="petrols" class="small" style="margin-top:8px"></div>
   </section>
 
   <section class="card">
-    <h2>Home electricity (monthly price)</h2>
-    <label class="l" for="home">Home electricity (SEK/kWh), calculated or estimated</label>
+    <h2 data-i18n="homeTitle">Electricity at home</h2>
+    <label class="l" data-i18n="areaLabel">Electricity price area</label>
+    <div id="areas" class="chips" style="margin-top:0"></div>
+    <p class="hint" data-i18n="areaHint"></p>
+    <div class="gap"></div>
+    <label class="l" data-i18n="contractLabel">Your electricity contract</label>
+    <div id="contracts" class="chips" style="margin-top:0"></div>
+    <p id="contracthint" class="hint"></p>
+    <div class="gap"></div>
+    <label class="l" for="home" data-i18n="priceLabel"></label>
     <input id="home" type="text" inputmode="decimal" autocomplete="off">
-    <p class="hint">Unlike petrol, electricity at home is billed at the average of the whole month, so the day or hour of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:</p>
     <div id="months" class="chips"></div>
     <p id="monthnote" class="hint"></p>
-    <p class="hint">Price = pure energy price per kWh incl. VAT, without fixed fees: (monthly spot + variable costs 0.115 + grid transfer 0.258 + energy tax 0.36) × 1.25, from your October 2026 bills.</p>
     <div class="gap"></div>
-    <label class="l" for="homehours">Time parked at home (connected to the charger): <b id="homehoursv"></b></label>
+    <label class="l" for="fees" data-i18n="feesLabel"></label>
+    <input id="fees" type="text" inputmode="decimal" autocomplete="off">
+    <p class="hint" data-i18n="feesHint"></p>
+    <div class="gap"></div>
+    <label class="l" for="homehours"><span data-i18n="homeHoursLabel"></span>: <b id="homehoursv"></b></label>
     <input id="homehours" type="range" min="1" max="24" step="1">
-    <label class="l" style="margin-top:10px">Home charger: household socket (fuse setting of the cable) or wallbox</label>
-    <div id="homeamps" class="chips"></div>
+    <label class="l" style="margin-top:10px" data-i18n="ampLabel"></label>
+    <div id="homeamps" class="chips" style="margin-top:0"></div>
     <p id="homepw" class="hint"></p>
   </section>
 
   <section class="card">
-    <h2>Trip (optional)</h2>
-    <label class="l" for="trip">Round-trip distance (km), 0 = off</label>
+    <h2 data-i18n="distTitle">Distance (optional)</h2>
+    <label class="l" for="tomorrow" data-i18n="tomLabel"></label>
+    <input id="tomorrow" type="text" inputmode="decimal" autocomplete="off">
+    <p id="tomout" class="small" style="margin:8px 0 14px;color:var(--ink)"></p>
+    <label class="l" for="trip" data-i18n="tripLabel"></label>
     <input id="trip" type="text" inputmode="decimal" autocomplete="off">
     <p id="tripout" class="small" style="margin:8px 0 0;color:var(--ink)"></p>
   </section>
 
+  <section class="card">
+    <h2 data-i18n="yearTitle">Per year (estimate)</h2>
+    <label class="l" for="perweek"><span data-i18n="perWeekLabel"></span>: <b id="perweekv"></b></label>
+    <input id="perweek" type="range" min="1" max="14" step="1">
+    <p id="yearout" class="small" style="margin:8px 0 0;color:var(--ink)"></p>
+  </section>
+
   <!-- 3. Details and settings last -->
   <section class="card">
-    <h2>Comparison in detail</h2>
+    <h2 data-i18n="cmpTitle">Comparison in detail</h2>
     <div id="cmp"></div>
     <details>
-      <summary>How the numbers are calculated</summary>
+      <summary data-i18n="rateSummary"></summary>
       <p id="rate" class="small"></p>
     </details>
   </section>
 
   <section class="card">
+    <h2 data-i18n="logTitle">Measure your real consumption</h2>
+    <p class="hint" style="margin-top:0" data-i18n="logHint"></p>
+    <div class="row" style="margin-top:8px">
+      <div class="field"><label class="l" for="logkwh" data-i18n="logKwh"></label><input id="logkwh" type="text" inputmode="decimal" autocomplete="off"></div>
+      <div class="field"><label class="l" for="logkm" data-i18n="logKm"></label><input id="logkm" type="text" inputmode="decimal" autocomplete="off"></div>
+    </div>
+    <button id="logadd" class="chip primary" style="margin-top:10px;font-size:15px;padding:8px 18px" data-i18n="logAdd">Add</button>
+    <div id="loglist" class="small" style="margin-top:10px"></div>
+    <div id="logsum" style="margin-top:8px;font-size:14px"></div>
+  </section>
+
+  <section class="card">
     <details>
-      <summary>Car settings and assumptions</summary>
+      <summary data-i18n="setTitle">Car settings and assumptions</summary>
       <div class="gap"></div>
-      <label class="l" for="hold">Level the car holds in hybrid mode (% on the display)</label>
-      <input id="hold" type="text" inputmode="decimal" autocomplete="off">
-      <p class="hint">15 %: the level at which the car switches to hybrid mode. Change it here if that ever differs. The car never runs the battery fully empty: only the charge between this level and 100 % is counted.</p>
+      <label class="l" for="cvusable" data-i18n="setUsable"></label>
+      <input id="cvusable" type="text" inputmode="decimal" autocomplete="off">
       <div class="gap"></div>
-      <label class="l" for="kw">Car's max AC charging power (kW)</label>
-      <input id="kw" type="text" inputmode="decimal" autocomplete="off">
-      <p class="hint">Charging power used is the lower of this and the chosen charger's power.</p>
+      <label class="l" for="cvkw" data-i18n="setKw"></label>
+      <input id="cvkw" type="text" inputmode="decimal" autocomplete="off">
+      <p class="hint" data-i18n="setKwHint"></p>
       <div class="gap"></div>
-      <p class="small" style="margin:0">Santa Fe PHEV 2025: battery 13.8 kWh gross, usable about 10.4 kWh from the socket (54 km WLTP). Charging is AC only. Winter and summer consumption and the home-price forecast are estimates (see the notes above). Parking fees, idle fees and detours are not included. Map: © OpenStreetMap contributors.</p>
+      <label class="l" for="cvhold" id="lblhold"></label>
+      <input id="cvhold" type="text" inputmode="decimal" autocomplete="off">
+      <p class="hint" data-i18n="setHoldHint"></p>
+      <div class="gap"></div>
+      <div class="row">
+        <div class="field"><label class="l" for="cvelS" data-i18n="setElS"></label><input id="cvelS" type="text" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label class="l" for="cvelW" data-i18n="setElW"></label><input id="cvelW" type="text" inputmode="decimal" autocomplete="off"></div>
+      </div>
+      <div class="gap"></div>
+      <div class="row">
+        <div class="field"><label class="l" for="cvlS" id="lbllS"></label><input id="cvlS" type="text" inputmode="decimal" autocomplete="off"></div>
+        <div class="field"><label class="l" for="cvlW" id="lbllW"></label><input id="cvlW" type="text" inputmode="decimal" autocomplete="off"></div>
+      </div>
+      <button id="cvreset" class="chip" style="margin-top:10px" data-i18n="reset"></button>
+      <p class="small" id="carnote" style="margin:12px 0 0"></p>
+      <p class="small" style="margin:8px 0 0" data-i18n="setCommon"></p>
     </details>
   </section>
+  <p class="hint" data-i18n="foot"></p>
 </main>
 
 <script>
 (function(){
   var KEY = "wo-laden-heute-v1";
-  var USABLE_KWH = 10.4;
+  var LANGS = ["en", "de", "sv"];
   var MAINS_V = 230;   // household socket: single phase
   var AMPS = [6, 8, 10, 12, 16];   // choices for the household socket; 0 = wallbox
+  var AREAS = ["SE1", "SE2", "SE3", "SE4"];
+  var CONTRACTS = ["avg", "hourly", "fixed"];
   var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
-  var HOLD_DEFAULT = 15;   // static default: % on the display where the car holds charge in hybrid mode (changeable in the page)
-  var SEASONS = {
-    winter:{el:25, l:8.3, name:"Winter (about -5 to +5 °C): heating and a cold battery raise"},
-    summer:{el:19, l:7.0, name:"Summer: mild weather gives"}
+  var VAT = 1.25, FEES_DEFAULT = 0.73337;   // fees default: one household's October 2026 bills (variable 0.11497 + grid 0.2584 + energy tax 0.36)
+  var FEES_VALID_TO = "2026-12-31";   // fees usually change on 1 January: warn after this date while the default is untouched
+  var DECAY = 0.7, HIST = ["2023", "2024", "2025"];
+  var BASE = "https://eurofuelprices.com/";
+  // Car presets: usable = kWh from the socket for the usable battery span, kw = AC limit, hold = % where hybrid mode takes over (PHEV) or reserve (BEV),
+  // el = electric kWh/100 km (S summer, W winter, from the socket), l = petrol l/100 km (hybrid mode, or the comparison petrol car for a BEV).
+  var PRESETS = {
+    phev:    {type:"phev", perWeek:5, v:{usable:10, kw:3.7, hold:10, elS:20, elW:26, lS:6.5, lW:7.5}},
+    santafe: {type:"phev", perWeek:5, v:{usable:10.4, kw:3.6, hold:15, elS:19, elW:25, lS:7.0, lW:8.3}},
+    bev:     {type:"bev",  perWeek:2, v:{usable:55, kw:11, hold:0, elS:17, elW:22, lS:6.5, lW:7.5}}
   };
-  function seasonNote(se){ return se.name + " electric consumption of " + se.el + " kWh/100 km (about " + Math.round(USABLE_KWH * 100 / se.el) + " km range on a full charge) and petrol consumption of " + se.l + " l/100 km in hybrid mode. These are estimates, not measured values."; }
-  var DEFAULT = {holdEdited:false, petrolEdited:false, hold:HOLD_DEFAULT, petrol:15.80, home:4.59, homeEdited:false, season:(new Date().getMonth() >= 9 || new Date().getMonth() <= 2) ? "winter" : "summer", soc:20, hours:1, kw:3.6, trip:0, homeHours:10, homeAmp:0};   // homeAmp: household socket in A, 0 = wallbox (the car limit decides)
-  // Only settings that differ from DEFAULT are stored on the device. Values that come from data (pump price, spot-based home price) are stored only when the user typed them.
-  var AUTO = {petrol:"petrolEdited", home:"homeEdited", hold:"holdEdited"};
+  var CVKEYS = ["usable", "kw", "hold", "elS", "elW", "lS", "lW"];
+
+  // ---- texts: [English, Deutsch, Svenska]. {x} are placeholders. ----
+  var TX = {
+    title:["Where to charge today?","Wo heute laden?","Var ska jag ladda idag?"],
+    locTitle:["Where are you?","Wo bist du?","Var är du?"],
+    locBtn:["Use my location","Meinen Standort nutzen","Använd min plats"],
+    locHint:["Your location sets the petrol price and shows the chargers around you. It stays on your phone; only the map tiles reveal the area to OpenStreetMap. The page covers Sweden for now (petrol, electricity price areas SE1–SE4, chargers).","Dein Standort bestimmt den Benzinpreis und zeigt die Ladepunkte in deiner Nähe. Er bleibt auf deinem Handy; nur die Kartenkacheln verraten das Gebiet an OpenStreetMap. Die Seite deckt vorerst Schweden ab (Benzin, Strompreisgebiete SE1–SE4, Ladepunkte).","Din plats avgör bensinpriset och visar laddare nära dig. Den stannar på din telefon; bara kartrutorna avslöjar området för OpenStreetMap. Sidan täcker tills vidare Sverige (bensin, elprisområden SE1–SE4, laddare)."],
+    locFinding:["Finding your location …","Standort wird ermittelt …","Hittar din plats …"],
+    locLoading:["Loading chargers and petrol prices …","Ladepunkte und Benzinpreise werden geladen …","Laddare och bensinpriser laddas …"],
+    locNoGeo:["This browser cannot determine your location.","Dieser Browser kann den Standort nicht bestimmen.","Webbläsaren kan inte avgöra din plats."],
+    locDenied:["No location. Allow location access in the browser and try again.","Kein Standort. Erlaube den Standortzugriff im Browser und versuche es erneut.","Ingen plats. Tillåt platsåtkomst i webbläsaren och försök igen."],
+    locErr:["Could not load data from eurofuelprices.com.","Daten von eurofuelprices.com konnten nicht geladen werden.","Kunde inte ladda data från eurofuelprices.com."],
+    locDone:["Location found (accuracy about {acc} m). The cheapest nearby petrol and the nearest charger are preselected; change them below.","Standort gefunden (Genauigkeit etwa {acc} m). Das günstigste Benzin in der Nähe und der nächste Ladepunkt sind vorgewählt; ändere sie unten.","Plats hittad (noggrannhet cirka {acc} m). Billigaste bensinen i närheten och närmaste laddare är förvalda; ändra nedan."],
+    locFar:[" Note: the nearest charger is {km} km away."," Hinweis: Der nächste Ladepunkt ist {km} km entfernt."," Obs: närmaste laddare är {km} km bort."],
+    rec:["Recommendation · do this now","Empfehlung · jetzt tun","Rekommendation · gör så här nu"],
+    doNot:["Do not charge","Nicht laden","Ladda inte"],
+    doNotAct:["Do not plug in. Drive in hybrid mode.","Nicht anstecken. Im Hybridmodus fahren.","Sätt inte i sladden. Kör i hybridläge."],
+    full:["The battery is practically full. Drive in hybrid mode.","Der Akku ist praktisch voll. Im Hybridmodus fahren.","Batteriet är i princip fullt. Kör i hybridläge."],
+    doNotBev:["Nothing to charge","Nichts zu laden","Inget att ladda"],
+    fullBev:["The battery is practically full. Nothing to charge.","Der Akku ist praktisch voll. Nichts zu laden.","Batteriet är i princip fullt. Inget att ladda."],
+    hevBig:["Drive in HEV mode","Im Hybridmodus fahren","Kör i hybridläge"],
+    hevAct1:["Do not bother plugging in at home. The saving is too small.","Zuhause lohnt sich das Anstecken nicht. Die Ersparnis ist zu klein.","Det lönar sig inte att ladda hemma. Besparingen är för liten."],
+    hevAct2:["Do not plug in at home. Petrol is cheaper today.","Zuhause nicht anstecken. Benzin ist heute günstiger.","Ladda inte hemma. Bensin är billigare idag."],
+    hevL1a:["Home saves only {x} SEK per kWh, below the {min} SEK/kWh needed to make it worth the effort.","Zuhause spart nur {x} SEK pro kWh, unter den {min} SEK/kWh, ab denen sich der Aufwand lohnt.","Hemma sparar bara {x} SEK per kWh, under de {min} SEK/kWh som krävs för att det ska löna sig."],
+    hevL1b:["Charging at home costs more than petrol per km today.","Laden zuhause kostet pro km heute mehr als Benzin.","Att ladda hemma kostar mer per km än bensin idag."],
+    roadLine:["In {h} h at {kw} kW you can charge {kwh} kWh ({km} km) at {name}.","In {h} h bei {kw} kW lädst du {kwh} kWh ({km} km) bei {name}.","På {h} h med {kw} kW laddar du {kwh} kWh ({km} km) vid {name}."],
+    hevL2:["{road} On the road, charging only pays below {x} SEK/kWh. Check the price in the charger's app.","{road} Unterwegs lohnt sich das Laden nur unter {x} SEK/kWh. Prüfe den Preis in der App der Säule.","{road} På vägen lönar det sig bara under {x} SEK/kWh. Kolla priset i laddarens app."],
+    homeBig:["Charge at home","Zuhause laden","Ladda hemma"],
+    homeActRoad:["Top up at {name} only if its app shows less than {x} SEK/kWh. Charge the rest at home.","Lade bei {name} nur nach, wenn die App weniger als {x} SEK/kWh zeigt. Den Rest zuhause laden.","Fyll på vid {name} bara om appen visar mindre än {x} SEK/kWh. Ladda resten hemma."],
+    homeAct:["Plug in when you get home.","Stecke an, wenn du zuhause bist.","Sätt i sladden när du kommer hem."],
+    homeL1:["{kwh} kWh at {price} SEK/kWh: {res} versus petrol.","{kwh} kWh zu {price} SEK/kWh: {res} gegenüber Benzin.","{kwh} kWh à {price} SEK/kWh: {res} jämfört med bensin."],
+    homeL2road:["{road} Any road price below the home price of {price} SEK/kWh saves even more.","{road} Jeder Preis unterwegs unter dem Heimpreis von {price} SEK/kWh spart noch mehr.","{road} Varje pris på vägen under hempriset {price} SEK/kWh sparar ännu mer."],
+    homeL2none:["Tap “Use my location” at the top, then pick a charger on the map to see the highest road price worth paying.","Tippe oben auf „Meinen Standort nutzen“ und wähle dann einen Ladepunkt auf der Karte, um den höchsten lohnenden Preis unterwegs zu sehen.","Tryck på ”Använd min plats” högst upp och välj sedan en laddare på kartan för att se högsta lönsamma pris på vägen."],
+    bevNeg:["At this price a petrol car would cost less per km (by {x} SEK per kWh of electricity).","Bei diesem Preis wäre ein Benziner pro km günstiger (um {x} SEK je kWh Strom).","Till det här priset vore en bensinbil billigare per km (med {x} SEK per kWh el)."],
+    beTitle:["Break-even: where charging and petrol cost the same","Break-even: wo Laden und Benzin gleich viel kosten","Break-even: där laddning och bensin kostar lika mycket"],
+    beHint:["Left: charging stops paying when petrol gets cheaper than this. Right: petrol becomes the cheaper choice when electricity gets more expensive than this. Both are the same tipping point, once in petrol terms, once in electricity terms. On the road the page does not know the price: it shows the highest price worth paying, and you compare it with the price in the charger's app.","Links: Laden lohnt sich nicht mehr, wenn Benzin billiger wird als dieser Wert. Rechts: Benzin wird die günstigere Wahl, wenn Strom teurer wird als dieser Wert. Beides ist derselbe Kipppunkt, einmal als Benzinpreis, einmal als Strompreis. Unterwegs kennt die Seite den Preis nicht: Sie zeigt den höchsten lohnenden Preis, den du mit dem Preis in der App der Säule vergleichst.","Vänster: laddning lönar sig inte längre när bensin blir billigare än detta. Höger: bensin blir billigare när elen blir dyrare än detta. Båda är samma vändpunkt, en gång som bensinpris och en gång som elpris. På vägen känner sidan inte till priset: den visar högsta lönsamma pris, som du jämför med priset i laddarens app."],
+    beHome:["Home","Zuhause","Hemma"],
+    beRoad:["On the road: {name}","Unterwegs: {name}","På vägen: {name}"],
+    tPetrolBE:["Petrol break-even","Benzin-Break-even","Break-even bensin"],
+    tElBE:["Electricity break-even","Strom-Break-even","Break-even el"],
+    tWorth:["Worth paying up to","Lohnt sich bis","Lönar sig upp till"],
+    unitPetrol:["SEK/l · today {x}","SEK/l · heute {x}","SEK/l · idag {x}"],
+    unitEl:["SEK/kWh · today {x}","SEK/kWh · heute {x}","SEK/kWh · idag {x}"],
+    unitElP:["SEK/kWh · petrol {x} SEK/l","SEK/kWh · Benzin {x} SEK/l","SEK/kWh · bensin {x} SEK/l"],
+    unitKwh:["SEK/kWh","SEK/kWh","SEK/kWh"],
+    winP:["Charging wins: petrol is {x} above","Laden gewinnt: Benzin liegt {x} darüber","Laddning vinner: bensinen är {x} över"],
+    loseP:["Petrol wins: petrol is {x} below","Benzin gewinnt: Benzin liegt {x} darunter","Bensin vinner: bensinen är {x} under"],
+    winE:["Charging wins: electricity is {x} below","Laden gewinnt: Strom liegt {x} darunter","Laddning vinner: elen är {x} under"],
+    loseE:["Petrol wins: electricity is {x} above","Benzin gewinnt: Strom liegt {x} darüber","Bensin vinner: elen är {x} över"],
+    aboveThis:["Above this price petrol is cheaper","Über diesem Preis ist Benzin günstiger","Över detta pris är bensin billigare"],
+    cheaperHome:["Cheaper than home and worth the effort","Günstiger als zuhause und den Aufwand wert","Billigare än hemma och värt besväret"],
+    carTitle:["Your car","Dein Auto","Din bil"],
+    carLabel:["Car type","Fahrzeugtyp","Biltyp"],
+    car_phev:["Plug-in hybrid (typical)","Plug-in-Hybrid (typisch)","Laddhybrid (typisk)"],
+    car_santafe:["Hyundai Santa Fe PHEV 2025","Hyundai Santa Fe PHEV 2025","Hyundai Santa Fe PHEV 2025"],
+    car_bev:["Electric car (typical)","Elektroauto (typisch)","Elbil (typisk)"],
+    socLabel:["Battery level (as shown in the car)","Akkustand (wie im Auto angezeigt)","Batterinivå (som bilen visar)"],
+    socHintPhev:["Only the charge above the hybrid hold level can be recharged. The level is set under “Car settings” at the bottom.","Nur die Ladung über dem Hybrid-Haltepegel kann nachgeladen werden. Der Pegel steht unten unter „Fahrzeugeinstellungen“.","Bara laddningen över hybridnivån kan laddas. Nivån ställs in längst ner under ”Bilinställningar”."],
+    socHintBev:["Only the charge above the reserve buffer is counted. The buffer is set under “Car settings” at the bottom.","Nur die Ladung über dem Reservepuffer wird gezählt. Der Puffer steht unten unter „Fahrzeugeinstellungen“.","Bara laddningen över reservbufferten räknas. Bufferten ställs in längst ner under ”Bilinställningar”."],
+    season:["Season","Jahreszeit","Årstid"],
+    winter:["Winter","Winter","Vinter"],
+    summer:["Summer","Sommer","Sommar"],
+    useTemp:["Use the outside temperature at my location instead (sends my approximate position to open-meteo.com)","Stattdessen die Außentemperatur an meinem Standort nutzen (sendet meine ungefähre Position an open-meteo.com)","Använd i stället utomhustemperaturen på min plats (skickar min ungefärliga position till open-meteo.com)"],
+    seasonWinter:["Winter (about −5 to +5 °C): heating and a cold battery raise consumption.","Winter (etwa −5 bis +5 °C): Heizung und kalter Akku erhöhen den Verbrauch.","Vinter (cirka −5 till +5 °C): värme och kall batteri höjer förbrukningen."],
+    seasonSummer:["Summer: mild weather, low consumption.","Sommer: mildes Wetter, geringer Verbrauch.","Sommar: milt väder, låg förbrukning."],
+    seasonTemp:["At {t} °C (outside temperature at your location): consumption between the summer and winter values.","Bei {t} °C (Außentemperatur an deinem Standort): Verbrauch zwischen Sommer- und Winterwert.","Vid {t} °C (utomhustemperatur på din plats): förbrukning mellan sommar- och vintervärdet."],
+    seasonVals:["Electric: {el} kWh/100 km (about {km} km range on a full charge). Petrol {petrol}: {l} l/100 km. These are estimates, not measured values.","Strom: {el} kWh/100 km (etwa {km} km Reichweite bei voller Ladung). Benzin {petrol}: {l} l/100 km. Das sind Schätzwerte, keine Messwerte.","El: {el} kWh/100 km (cirka {km} km räckvidd vid full laddning). Bensin {petrol}: {l} l/100 km. Det är uppskattningar, inte mätvärden."],
+    petPhev:["in hybrid mode","im Hybridmodus","i hybridläge"],
+    petBev:["for a comparable petrol car","bei einem vergleichbaren Benziner","för en jämförbar bensinbil"],
+    timeTitle:["Time at the charger","Zeit am Ladepunkt","Tid vid laddaren"],
+    timeHint:["How far you get on electricity, by time at the charger and charging power. Household sockets are shown at 6 to 16 A (230 V). At stations, and on a wallbox, the car's own limit is the maximum power, so a stronger charger is not faster. Rows marked “road stop” and “at home” are the times you set below.","Wie weit du elektrisch kommst, je nach Zeit am Ladepunkt und Ladeleistung. Haushaltssteckdosen sind mit 6 bis 16 A (230 V) angegeben. An Ladesäulen und an der Wallbox ist die Grenze des Autos die maximale Leistung, ein stärkerer Lader ist also nicht schneller. Zeilen mit „Stopp unterwegs“ und „zuhause“ sind die unten eingestellten Zeiten.","Hur långt du kommer på el, beroende på tid vid laddaren och laddeffekt. Vanliga uttag visas med 6 till 16 A (230 V). Vid laddstolpar och på laddbox är bilens egen gräns maxeffekten, så en starkare laddare är inte snabbare. Rader märkta ”stopp på vägen” och ”hemma” är tiderna du ställer in nedan."],
+    colTime:["Time","Zeit","Tid"],
+    colStation:["Station","Säule","Stolpe"],
+    tagHome:["(home)","(zuhause)","(hemma)"],
+    tagRoad:[" · road stop"," · Stopp unterwegs"," · stopp på vägen"],
+    tagAtHome:[" · at home"," · zuhause"," · hemma"],
+    fullWord:["full","voll","full"],
+    fullCharge:["Full charge","Volle Ladung","Full laddning"],
+    fillNote:["From your battery level, a full charge is {kwh} kWh ({km} km). The car's limit is {kw} kW; stronger chargers are not faster.","Ab deinem Akkustand sind es für eine volle Ladung {kwh} kWh ({km} km). Das Limit des Autos ist {kw} kW; stärkere Lader sind nicht schneller.","Från din batterinivå är full laddning {kwh} kWh ({km} km). Bilens gräns är {kw} kW; starkare laddare är inte snabbare."],
+    chTitle:["Chargers near you (Type 2, AC)","Ladepunkte in deiner Nähe (Typ 2, AC)","Laddare nära dig (Typ 2, AC)"],
+    mapIdle:["After “Use my location” (top of the page) the chargers around you appear on a map. Tap one to select it.","Nach „Meinen Standort nutzen“ (oben) erscheinen die Ladepunkte um dich auf einer Karte. Tippe einen an, um ihn zu wählen.","Efter ”Använd min plats” (högst upp) visas laddarna runt dig på en karta. Tryck på en för att välja den."],
+    mapReady:["Tap a charger to select it. Orange = charger, green = selected, blue = you.","Tippe einen Ladepunkt an, um ihn zu wählen. Orange = Ladepunkt, grün = gewählt, blau = du.","Tryck på en laddare för att välja den. Orange = laddare, grön = vald, blå = du."],
+    mapNone:["No Type 2 charger found near you.","Kein Typ-2-Ladepunkt in deiner Nähe gefunden.","Ingen Typ 2-laddare hittades nära dig."],
+    mapFail:["The map could not be loaded (offline?). The chargers are still counted: the nearest one is selected.","Die Karte konnte nicht geladen werden (offline?). Die Ladepunkte werden trotzdem gezählt: Der nächste ist gewählt.","Kartan kunde inte laddas (offline?). Laddarna räknas ändå: den närmaste är vald."],
+    chSelLabel:["Or choose a charger from the list (same as tapping the map)","Oder wähle einen Ladepunkt aus der Liste (wie ein Tippen auf die Karte)","Eller välj en laddare i listan (samma som att trycka på kartan)"],
+    chNone:["No charger (home only)","Kein Ladepunkt (nur zuhause)","Ingen laddare (bara hemma)"],
+    chPower:["power unknown","Leistung unbekannt","effekt okänd"],
+    opUnknown:["operator unknown","Betreiber unbekannt","operatör okänd"],
+    chInfo:["Operator: {op} · Power: {kw} · Connector: Type 2 AC · {km} km away","Betreiber: {op} · Leistung: {kw} · Anschluss: Typ 2 AC · {km} km entfernt","Operatör: {op} · Effekt: {kw} · Kontakt: Typ 2 AC · {km} km bort"],
+    chClear:["clear","löschen","rensa"],
+    chNoSel:["No charger selected: the comparison uses home only. Tap a charger on the map.","Kein Ladepunkt gewählt: Der Vergleich nutzt nur zuhause. Tippe einen Ladepunkt auf der Karte an.","Ingen laddare vald: jämförelsen använder bara hemma. Tryck på en laddare på kartan."],
+    chData:["Charger data: {src}{gen}.","Ladepunktdaten: {src}{gen}.","Laddardata: {src}{gen}."],
+    chFile:[", file of {d}",", Datei vom {d}",", fil från {d}"],
+    chOld:[" (old: the charger data has not been refreshed for over 3 weeks)"," (alt: Die Ladepunktdaten wurden seit über 3 Wochen nicht aktualisiert)"," (gammal: laddardatan har inte uppdaterats på över 3 veckor)"],
+    navigate:["Navigate","Navigieren","Navigera"],
+    findPrice:["Find the price","Preis suchen","Hitta priset"],
+    hoursLabel:["Time parked at the charger","Standzeit am Ladepunkt","Tid parkerad vid laddaren"],
+    pwChosen:["Charging power used: {kw} kW (the lower of the car's limit and {name}{ckw}).","Verwendete Ladeleistung: {kw} kW (der niedrigere Wert aus Fahrzeuglimit und {name}{ckw}).","Använd laddeffekt: {kw} kW (det lägre av bilens gräns och {name}{ckw})."],
+    pwNone:["Charging power used: {kw} kW (the car's limit is the maximum at stations). It follows the charger you pick on the map.","Verwendete Ladeleistung: {kw} kW (das Fahrzeuglimit ist an Ladesäulen das Maximum). Sie folgt dem Ladepunkt, den du auf der Karte wählst.","Använd laddeffekt: {kw} kW (bilens gräns är max vid laddare). Den följer laddaren du väljer på kartan."],
+    petTitle:["Petrol (daily price)","Benzin (Tagespreis)","Bensin (dagspris)"],
+    petTitleBev:["Petrol (the petrol car you compare with)","Benzin (der Benziner, mit dem du vergleichst)","Bensin (bensinbilen du jämför med)"],
+    petLabel:["Petrol 95 (SEK/l), loaded automatically","Benzin 95 (SEK/l), automatisch geladen","Bensin 95 (SEK/l), laddas automatiskt"],
+    petList:["After “Use my location” the 5 nearest petrol stations appear here. Pick one and its price replaces the price above.","Nach „Meinen Standort nutzen“ erscheinen hier die 5 nächsten Tankstellen. Wähle eine, dann ersetzt ihr Preis den Preis oben.","Efter ”Använd min plats” visas de 5 närmaste bensinstationerna här. Välj en så ersätter dess pris priset ovan."],
+    petNone:["No petrol price within 50 km of you.","Kein Benzinpreis im Umkreis von 50 km.","Inget bensinpris inom 50 km."],
+    petMeta:["{km} km · {when}","{km} km · {when}","{km} km · {when}"],
+    petAsOf:["as of {d}","Stand {d}","per {d}"],
+    petNoDate:["date unknown","Datum unbekannt","datum okänt"],
+    petSrcPump:["Petrol price from {name}, {km} km away, {when}. No forecast: today's pump price only.","Benzinpreis von {name}, {km} km entfernt, {when}. Keine Prognose: nur der heutige Zapfsäulenpreis.","Bensinpris från {name}, {km} km bort, {when}. Ingen prognos: bara dagens pumppris."],
+    petSrcFresh:["Daily price, loaded automatically: national median of {n} prices dated in the last 3 days{newest}. Tap “Use my location” to use a pump near you.","Tagespreis, automatisch geladen: Median von {n} Preisen der letzten 3 Tage in Schweden{newest}. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Dagspris, laddas automatiskt: median av {n} priser från de senaste 3 dagarna i Sverige{newest}. Tryck på ”Använd min plats” för en pump nära dig."],
+    petSrcOld:["Few dated prices today: median of all {n} Swedish prices, some may be older{newest}. Tap “Use my location” to use a pump near you.","Wenige Preise mit Datum heute: Median aller {n} schwedischen Preise, einige können älter sein{newest}. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Få priser med datum idag: median av alla {n} svenska priser, vissa kan vara äldre{newest}. Tryck på ”Använd min plats” för en pump nära dig."],
+    petSrcErr:["No current petrol data. Using the built-in default of {x} SEK/l. Tap “Use my location” to try again.","Keine aktuellen Benzindaten. Es gilt der eingebaute Standardwert von {x} SEK/l. Tippe auf „Meinen Standort nutzen“, um es erneut zu versuchen.","Inga aktuella bensindata. Det inbyggda standardvärdet {x} SEK/l används. Tryck på ”Använd min plats” för att försöka igen."],
+    petSrcHand:["Hand-entered or default petrol price. Tap “Use my location” to use a pump near you. No forecast: today's price only.","Von Hand eingegebener oder Standard-Benzinpreis. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe. Keine Prognose: nur der heutige Preis.","Handskrivet eller standardpris för bensin. Tryck på ”Använd min plats” för en pump nära dig. Ingen prognos: bara dagens pris."],
+    newest:[" (newest {d})"," (neueste {d})"," (senaste {d})"],
+    homeTitle:["Electricity at home","Strom zuhause","El hemma"],
+    areaLabel:["Electricity price area","Strompreisgebiet","Elprisområde"],
+    areaHint:["SE1 north (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 south (Malmö).","SE1 Norden (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 Süden (Malmö).","SE1 norr (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 söder (Malmö)."],
+    contractLabel:["Your electricity contract","Dein Stromvertrag","Ditt elavtal"],
+    c_avg:["Monthly average","Monatsmittel","Månadsmedel"],
+    c_hourly:["Hourly spot","Stündlich (Spot)","Timpris (spot)"],
+    c_fixed:["Fixed price","Festpreis","Fast pris"],
+    cHintAvg:["Billed at the average spot price of the whole month (typical for Swedish “rörligt” contracts): the day or hour of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:","Abgerechnet wird zum Durchschnittspreis des ganzen Monats (typisch für schwedische „rörligt“-Verträge): Tag und Uhrzeit des Ladens spielen keine Rolle, und der Endpreis steht erst nach Monatsende fest. Tippe einen Monat an, um seinen Preis zu nutzen:","Faktureras efter spotprisets medelvärde för hela månaden (typiskt för rörliga avtal): dag och timme för laddningen spelar ingen roll och slutpriset är först känt när månaden är slut. Tryck på en månad för att använda dess pris:"],
+    cHintHourly:["Billed hour by hour: the price is the average of the cheapest {n} hours in the next 24 h (as far as the prices are published): {hours}. Charge then.","Abgerechnet wird stundenweise: Der Preis ist der Durchschnitt der günstigsten {n} Stunden der nächsten 24 h (soweit die Preise veröffentlicht sind): {hours}. Lade dann.","Faktureras timme för timme: priset är medelvärdet av de {n} billigaste timmarna de närmaste 24 h (så långt priserna är publicerade): {hours}. Ladda då."],
+    cHintHourlyNo:["No hourly prices available right now: enter your price below.","Gerade keine Stundenpreise verfügbar: Gib unten deinen Preis ein.","Inga timpriser tillgängliga just nu: ange ditt pris nedan."],
+    cHintFixed:["Fixed price: enter your price per kWh incl. VAT below.","Festpreis: Gib unten deinen Preis pro kWh inkl. MwSt. ein.","Fast pris: ange ditt pris per kWh inkl. moms nedan."],
+    priceLabel:["Home electricity price (SEK/kWh incl. VAT)","Strompreis zuhause (SEK/kWh inkl. MwSt.)","Elpris hemma (SEK/kWh inkl. moms)"],
+    feesLabel:["Fees on top of the spot price (SEK/kWh, excl. VAT)","Aufschläge auf den Spotpreis (SEK/kWh, ohne MwSt.)","Påslag på spotpriset (SEK/kWh, exkl. moms)"],
+    feesHint:["Supplier variable costs and markup + grid transfer + energy tax from your bill. The default 0.73 comes from one household in southern Sweden (October 2026 bills): replace it with yours. Price = (spot + fees) × 1.25.","Variable Kosten und Aufschlag des Lieferanten + Netzentgelt + Energiesteuer laut deiner Rechnung. Der Standardwert 0,73 stammt von einem Haushalt in Südschweden (Rechnungen Oktober 2026): Ersetze ihn durch deinen. Preis = (Spot + Aufschläge) × 1,25.","Leverantörens rörliga kostnader och påslag + elnät + energiskatt enligt din faktura. Standardvärdet 0,73 kommer från ett hushåll i södra Sverige (fakturor oktober 2026): ersätt det med ditt. Pris = (spot + påslag) × 1,25."],
+    monthSpot:[", spot {x}",", Spot {x}",", spot {x}"],
+    monthRange:["range {a} to {b}","Spanne {a} bis {b}","spann {a} till {b}"],
+    kindLast:["last month, calculated from the spot average","Vormonat, aus dem Spotmittel berechnet","förra månaden, beräknad från spotmedel"],
+    kindMonth:["calculated from the spot average","aus dem Spotmittel berechnet","beräknad från spotmedel"],
+    kindEst:["estimated ({d} of {n} days known, avg so far {a})","geschätzt ({d} von {n} Tagen bekannt, bisher Mittel {a})","uppskattad ({d} av {n} dagar kända, hittills medel {a})"],
+    kindFc:["estimate","Schätzung","uppskattning"],
+    monthNote:["Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now {f}x), with that excess fading by 30 % per month. The range runs from “back to normal” to “stays as high as now”. Spot = monthly average of your price area, excl. VAT.","Die Schätzungen sind eine Faustregel, keine Marktprognose: das typische Niveau des Monats 2023–2025, erhöht um den Faktor, um den die letzten 3 Monate darüber lagen (jetzt {f}x); dieser Überschuss schwindet um 30 % pro Monat. Die Spanne reicht von „zurück zur Normalität“ bis „bleibt so hoch wie jetzt“. Spot = Monatsmittel deines Preisgebiets, ohne MwSt.","Uppskattningarna är tumregler, inga marknadsprognoser: månadens typiska nivå 2023–2025, höjd med hur mycket högre de senaste 3 månaderna var (nu {f}x), där överskottet avtar med 30 % per månad. Spannet går från ”tillbaka till normalt” till ”förblir lika högt som nu”. Spot = månadsmedel för ditt prisområde, exkl. moms."],
+    spotNo:["No current spot data. The home price is the built-in default ({x} SEK/kWh, based on October). Enter your own price.","Keine aktuellen Spotpreise. Der Heimpreis ist der eingebaute Standardwert ({x} SEK/kWh, Stand Oktober). Gib deinen eigenen Preis ein.","Inga aktuella spotpriser. Hempriset är det inbyggda standardvärdet ({x} SEK/kWh, baserat på oktober). Ange ditt eget pris."],
+    homeHoursLabel:["Time parked at home (connected to the charger)","Standzeit zuhause (am Ladegerät angeschlossen)","Tid parkerad hemma (ansluten till laddaren)"],
+    ampLabel:["Home charger: household socket (fuse setting of the cable) or wallbox","Heimlader: Haushaltssteckdose (Stromstärke des Kabels) oder Wallbox","Hemmaladdare: vanligt uttag (kabelns strömstyrka) eller laddbox"],
+    wallbox:["Wallbox","Wallbox","Laddbox"],
+    homePwAmp:["Charging power used at home: {kw} kW ({a} A × {v} V = {raw} kW{cap}).","Verwendete Ladeleistung zuhause: {kw} kW ({a} A × {v} V = {raw} kW{cap}).","Använd laddeffekt hemma: {kw} kW ({a} A × {v} V = {raw} kW{cap})."],
+    homePwCap:["; the car's limit of {kw} kW applies","; es gilt das Fahrzeuglimit von {kw} kW","; bilens gräns på {kw} kW gäller"],
+    homePwWall:["Wallbox: the car's limit of {kw} kW is the charging power at home.","Wallbox: Das Fahrzeuglimit von {kw} kW ist die Ladeleistung zuhause.","Laddbox: bilens gräns på {kw} kW är laddeffekten hemma."],
+    distTitle:["Distance (optional)","Strecke (optional)","Sträcka (valfritt)"],
+    tomLabel:["Tomorrow's distance (km), 0 = off","Strecke morgen (km), 0 = aus","Morgondagens sträcka (km), 0 = av"],
+    tomHint:["Enter tomorrow's distance to see how much you need to charge.","Gib die Strecke für morgen ein, um zu sehen, wie viel du laden musst.","Ange morgondagens sträcka för att se hur mycket du behöver ladda."],
+    tomEnough:["{km} km need {need} kWh. The battery holds {have} kWh: no charging needed for it.{more}","{km} km brauchen {need} kWh. Der Akku hat {have} kWh: dafür ist kein Laden nötig.{more}","{km} km kräver {need} kWh. Batteriet har {have} kWh: ingen laddning behövs för det.{more}"],
+    tomMorePhev:[" Charging more still saves petrol on later days."," Mehr Laden spart an späteren Tagen trotzdem Benzin."," Att ladda mer sparar ändå bensin på senare dagar."],
+    tomCharge:["{km} km need {need} kWh, the battery holds {have} kWh. Charge {short} kWh: about {h} h at home ({kw} kW), about {cost} SEK.","{km} km brauchen {need} kWh, der Akku hat {have} kWh. Lade {short} kWh: etwa {h} h zuhause ({kw} kW), etwa {cost} SEK.","{km} km kräver {need} kWh, batteriet har {have} kWh. Ladda {short} kWh: cirka {h} h hemma ({kw} kW), cirka {cost} SEK."],
+    tomMore:["{km} km need {need} kWh, more than a full battery ({use} kWh, {range} km). Charge to full ({short} kWh, about {h} h at home); the remaining {rest} km {how}.","{km} km brauchen {need} kWh, mehr als ein voller Akku ({use} kWh, {range} km). Lade bis voll ({short} kWh, etwa {h} h zuhause); die restlichen {rest} km {how}.","{km} kräver {need} kWh, mer än ett fullt batteri ({use} kWh, {range} km). Ladda till fullt ({short} kWh, cirka {h} h hemma); de återstående {rest} km {how}."],
+    howPhev:["run on petrol","fährst du mit Benzin","går på bensin"],
+    howBev:["need a charging stop on the way","brauchen einen Ladestopp unterwegs","kräver ett laddstopp på vägen"],
+    tripLabel:["Round trip with a charging stop (km), 0 = off","Rundstrecke mit Ladestopp (km), 0 = aus","Rundtur med laddstopp (km), 0 = av"],
+    tripHint:["Enter the round-trip distance to see if it works fully electric.","Gib die Rundstrecke ein, um zu sehen, ob sie rein elektrisch geht.","Ange rundturens sträcka för att se om den går helt på el."],
+    tripBatt:["Battery now: {km} km","Akku jetzt: {km} km","Batteri nu: {km} km"],
+    tripWith:[". With {h} h at {name}: {km} km.",". Mit {h} h bei {name}: {km} km.",". Med {h} h vid {name}: {km} km."],
+    tripPick:[". Pick a charger on the map to add charging on site.",". Wähle einen Ladepunkt auf der Karte, um Laden vor Ort einzurechnen.",". Välj en laddare på kartan för att räkna med laddning på plats."],
+    tripYes:[" Fully electric: yes ({km} km trip)."," Rein elektrisch: ja ({km} km Strecke)."," Helt på el: ja ({km} km sträcka)."],
+    tripNoPhev:[" Fully electric: no. About {km} km on petrol = {l} l = {sek} SEK."," Rein elektrisch: nein. Etwa {km} km mit Benzin = {l} l = {sek} SEK."," Helt på el: nej. Cirka {km} km på bensin = {l} l = {sek} SEK."],
+    tripNoBev:[" Fully electric: no. You need about {kwh} kWh more on the way ({km} km)."," Rein elektrisch: nein. Du brauchst unterwegs etwa {kwh} kWh mehr ({km} km)."," Helt på el: nej. Du behöver cirka {kwh} kWh till på vägen ({km} km)."],
+    yearTitle:["Per year (estimate)","Pro Jahr (Schätzung)","Per år (uppskattning)"],
+    perWeekLabel:["Full charges at home per week","Volle Ladungen zuhause pro Woche","Fulladdningar hemma per vecka"],
+    yearNeg:["At these prices charging at home costs about {sek} SEK per year more than petrol ({kwh} kWh, {l} l of petrol replaced), charging {n}× a week from empty to full. Half a year with summer, half with winter values.","Zu diesen Preisen kostet das Laden zuhause etwa {sek} SEK pro Jahr mehr als Benzin ({kwh} kWh, {l} l Benzin ersetzt), wenn du {n}× pro Woche von leer bis voll lädst. Ein halbes Jahr mit Sommer-, ein halbes mit Winterwerten.","Till de här priserna kostar det cirka {sek} SEK mer per år att ladda hemma än att tanka bensin ({kwh} kWh, {l} l bensin ersatt), om du laddar {n} gånger i veckan från tomt till fullt. Ett halvår med sommar-, ett halvår med vintervärden."],
+    yearOut:["About {sek} SEK per year versus petrol ({kwh} kWh, {l} l of petrol saved), charging at home {n}× a week from empty to full. Half a year with summer, half with winter values.","Etwa {sek} SEK pro Jahr gegenüber Benzin ({kwh} kWh, {l} l Benzin gespart), wenn du zuhause {n}× pro Woche von leer bis voll lädst. Ein halbes Jahr mit Sommer-, ein halbes mit Winterwerten.","Cirka {sek} SEK per år jämfört med bensin ({kwh} kWh, {l} l bensin sparad), om du laddar hemma {n} gånger i veckan från tomt till fullt. Ett halvår med sommar-, ett halvår med vintervärden."],
+    cmpTitle:["Comparison in detail","Vergleich im Detail","Jämförelse i detalj"],
+    cmpHome:["Charge at home","Zuhause laden","Ladda hemma"],
+    cmpHomeText:["At home you are parked {h} h at {kw} kW: up to {max} kWh are possible; the battery has room for {room} kWh. So {kwh} kWh ({km} km) are charged.","Zuhause stehst du {h} h bei {kw} kW: bis zu {max} kWh sind möglich; der Akku hat Platz für {room} kWh. Geladen werden also {kwh} kWh ({km} km).","Hemma står du {h} h med {kw} kW: upp till {max} kWh är möjligt; batteriet har plats för {room} kWh. Alltså laddas {kwh} kWh ({km} km)."],
+    youPay:["You pay:","Du zahlst:","Du betalar:"],
+    payLine:["{kwh} kWh × {price} = {cost} SEK","{kwh} kWh × {price} = {cost} SEK","{kwh} kWh × {price} = {cost} SEK"],
+    youSave:["You save on petrol:","Du sparst beim Benzin:","Du sparar på bensin:"],
+    saveLine:["{km} km electric = {l} l = {sek} SEK","{km} km elektrisch = {l} l = {sek} SEK","{km} km på el = {l} l = {sek} SEK"],
+    result:["Result:","Ergebnis:","Resultat:"],
+    perKwh:["per kWh","pro kWh","per kWh"],
+    roadText:["In {h} h you can charge {max} kWh; the battery has room for {room} kWh. So {kwh} kWh ({km} km, {l} l of petrol) are charged.","In {h} h kannst du {max} kWh laden; der Akku hat Platz für {room} kWh. Geladen werden also {kwh} kWh ({km} km, {l} l Benzin).","På {h} h kan du ladda {max} kWh; batteriet har plats för {room} kWh. Alltså laddas {kwh} kWh ({km} km, {l} l bensin)."],
+    worthLine:["Worth up to: {sek} SEK in petrol, so pay at most {be} SEK/kWh ({lim} to make it worth the effort).","Wert: bis zu {sek} SEK in Benzin, zahle also höchstens {be} SEK/kWh ({lim}, damit sich der Aufwand lohnt).","Värt upp till: {sek} SEK i bensin, betala alltså högst {be} SEK/kWh ({lim} för att det ska vara värt besväret)."],
+    appPrice:["If the charger's app shows this price:","Wenn die App der Säule diesen Preis zeigt:","Om laddarens app visar det här priset:"],
+    thAppPrice:["App price (SEK/kWh)","App-Preis (SEK/kWh)","App-pris (SEK/kWh)"],
+    thPay:["You pay","Du zahlst","Du betalar"],
+    thVsPetrol:["vs petrol","vs. Benzin","mot bensin"],
+    thVsHome:["vs home","vs. zuhause","mot hemma"],
+    petrolDiff:["And if petrol were different:","Und wenn Benzin anders kostete:","Och om bensinen kostade något annat:"],
+    thPetrol:["Petrol (SEK/l)","Benzin (SEK/l)","Bensin (SEK/l)"],
+    thBE:["Break-even (SEK/kWh)","Break-even (SEK/kWh)","Break-even (SEK/kWh)"],
+    thWorth:["Worth the effort up to","Lohnt sich bis","Lönar sig upp till"],
+    today:["(today)","(heute)","(idag)"],
+    cmpHevTitle:["Do not charge (hybrid mode)","Nicht laden (Hybridmodus)","Ladda inte (hybridläge)"],
+    cmpHevText:["The car runs on petrol and keeps the charge level. Electricity cost: 0 SEK. Every option above is measured against this: its result is what you save compared with driving the same kilometres on petrol.","Das Auto fährt mit Benzin und hält den Ladestand. Stromkosten: 0 SEK. Alle Optionen oben werden daran gemessen: Ihr Ergebnis ist, was du gegenüber denselben Kilometern mit Benzin sparst.","Bilen går på bensin och håller laddnivån. Elkostnad: 0 SEK. Alla alternativ ovan mäts mot detta: deras resultat är vad du sparar jämfört med samma kilometer på bensin."],
+    cmpBevTitle:["Petrol car (comparison)","Benziner (Vergleich)","Bensinbil (jämförelse)"],
+    cmpBevText:["A comparable petrol car for the same kilometres. Every option above is measured against it: its result is what you save in fuel cost.","Ein vergleichbarer Benziner für dieselben Kilometer. Alle Optionen oben werden daran gemessen: Ihr Ergebnis ist, was du an Kraftstoffkosten sparst.","En jämförbar bensinbil för samma kilometer. Alla alternativ ovan mäts mot den: deras resultat är vad du sparar i bränslekostnad."],
+    rateSummary:["How the numbers are calculated","So werden die Zahlen berechnet","Så räknas siffrorna"],
+    rateText:["1 kWh from the socket gives {km} km electric ({el} kWh/100 km), which replaces {l} l of petrol ({lp} l/100 km). At {p} SEK/l that is worth {v} SEK per kWh. Gain per kWh = that value minus the electricity price. A gain below {min} SEK/kWh is too small to be worth the effort. On the road the price is not known: the highest price worth paying is the value per kWh (break-even); minus {min} it is worth the effort.","1 kWh aus der Steckdose ergibt {km} km elektrisch ({el} kWh/100 km) und ersetzt {l} l Benzin ({lp} l/100 km). Bei {p} SEK/l ist das {v} SEK pro kWh wert. Gewinn pro kWh = dieser Wert minus Strompreis. Ein Gewinn unter {min} SEK/kWh ist zu klein, um den Aufwand zu lohnen. Unterwegs ist der Preis unbekannt: Der höchste lohnende Preis ist der Wert pro kWh (Break-even); minus {min} lohnt sich der Aufwand.","1 kWh från uttaget ger {km} km på el ({el} kWh/100 km) och ersätter {l} l bensin ({lp} l/100 km). Vid {p} SEK/l är det värt {v} SEK per kWh. Vinst per kWh = det värdet minus elpriset. En vinst under {min} SEK/kWh är för liten för att löna besväret. På vägen är priset okänt: högsta lönsamma pris är värdet per kWh (break-even); minus {min} är det värt besväret."],
+    logTitle:["Measure your real consumption","Miss deinen echten Verbrauch","Mät din verkliga förbrukning"],
+    logHint:["After a charge, enter the kWh from the wall meter or the charger and the electric km you drove since the last charge. The page shows your real kWh per 100 km. The log stays on your device.","Trage nach dem Laden die kWh vom Zähler oder Ladegerät und die elektrisch gefahrenen km seit der letzten Ladung ein. Die Seite zeigt deinen echten Verbrauch in kWh pro 100 km. Das Protokoll bleibt auf deinem Gerät.","Ange efter laddning kWh från elmätaren eller laddaren och de elkilometer du kört sedan senaste laddning. Sidan visar din verkliga förbrukning i kWh per 100 km. Loggen stannar på din enhet."],
+    logKwh:["kWh charged (at the socket)","geladene kWh (an der Steckdose)","laddade kWh (vid uttaget)"],
+    logKm:["electric km driven","elektrisch gefahrene km","körda elkilometer"],
+    logAdd:["Add","Hinzufügen","Lägg till"],
+    logEntry:["{d} · {s} · {kwh} kWh · {km} km = {per} kWh/100 km","{d} · {s} · {kwh} kWh · {km} km = {per} kWh/100 km","{d} · {s} · {kwh} kWh · {km} km = {per} kWh/100 km"],
+    logDel:["remove","entfernen","ta bort"],
+    logSum:["{s}: {per} kWh/100 km over {km} km ({n} entries)","{s}: {per} kWh/100 km über {km} km ({n} Einträge)","{s}: {per} kWh/100 km över {km} km ({n} poster)"],
+    logNeed:["{s}: not enough data yet (at least 20 km)","{s}: noch zu wenig Daten (mindestens 20 km)","{s}: för lite data ännu (minst 20 km)"],
+    logUseW:["Use as winter value","Als Winterwert übernehmen","Använd som vintervärde"],
+    logUseS:["Use as summer value","Als Sommerwert übernehmen","Använd som sommarvärde"],
+    setTitle:["Car settings and assumptions","Fahrzeugeinstellungen und Annahmen","Bilinställningar och antaganden"],
+    setUsable:["Usable battery energy from the socket (kWh)","Nutzbare Batterieenergie aus der Steckdose (kWh)","Användbar batterienergi från uttaget (kWh)"],
+    setKw:["Car's max AC charging power (kW)","Max. AC-Ladeleistung des Autos (kW)","Bilens max AC-laddeffekt (kW)"],
+    setKwHint:["Charging power used is the lower of this and the charger's power.","Verwendet wird der niedrigere Wert aus diesem und der Leistung des Ladepunkts.","Det lägre av detta och laddarens effekt används."],
+    setHoldPhev:["Level the car holds in hybrid mode (% on the display)","Pegel, den das Auto im Hybridmodus hält (% im Display)","Nivå bilen håller i hybridläge (% på displayen)"],
+    setHoldBev:["Reserve buffer at the bottom (%)","Reservepuffer unten (%)","Reservbuffert i botten (%)"],
+    setHoldHint:["The car never runs the battery fully empty: only the charge between this level and 100 % is counted.","Das Auto leert den Akku nie ganz: Nur die Ladung zwischen diesem Pegel und 100 % wird gezählt.","Bilen tömmer aldrig batteriet helt: bara laddningen mellan denna nivå och 100 % räknas."],
+    setElS:["Electric consumption, summer (kWh/100 km, at the socket)","Stromverbrauch Sommer (kWh/100 km, an der Steckdose)","Elförbrukning sommar (kWh/100 km, vid uttaget)"],
+    setElW:["Electric consumption, winter (kWh/100 km, at the socket)","Stromverbrauch Winter (kWh/100 km, an der Steckdose)","Elförbrukning vinter (kWh/100 km, vid uttaget)"],
+    setLS:["Petrol {what}, summer (l/100 km)","Benzin {what}, Sommer (l/100 km)","Bensin {what}, sommar (l/100 km)"],
+    setLW:["Petrol {what}, winter (l/100 km)","Benzin {what}, Winter (l/100 km)","Bensin {what}, vinter (l/100 km)"],
+    reset:["Reset to the typical values","Auf typische Werte zurücksetzen","Återställ till typiska värden"],
+    noteSanta:["Hyundai Santa Fe PHEV 2025: battery 13.8 kWh gross, about 10.4 kWh usable from the socket (54 km WLTP). The 3.6 kW AC limit and the 15 % hybrid level are confirmed by the owner. Winter consumption is estimated; published sources suggest higher values (see README).","Hyundai Santa Fe PHEV 2025: Batterie 13,8 kWh brutto, etwa 10,4 kWh nutzbar aus der Steckdose (54 km WLTP). Das AC-Limit von 3,6 kW und der Hybrid-Pegel von 15 % sind vom Besitzer bestätigt. Der Winterverbrauch ist geschätzt; veröffentlichte Quellen deuten auf höhere Werte (siehe README).","Hyundai Santa Fe PHEV 2025: batteri 13,8 kWh brutto, cirka 10,4 kWh användbart från uttaget (54 km WLTP). AC-gränsen 3,6 kW och hybridnivån 15 % är bekräftade av ägaren. Vinterförbrukningen är uppskattad; publicerade källor tyder på högre värden (se README)."],
+    noteGeneric:["Typical values for this car type. Replace them with your car's data (manual, or measure with the log above).","Typische Werte für diesen Fahrzeugtyp. Ersetze sie durch die Daten deines Autos (Handbuch oder mit dem Protokoll oben messen).","Typiska värden för den här biltypen. Ersätt dem med din bils data (instruktionsbok, eller mät med loggen ovan)."],
+    setCommon:["Parking fees, idle fees and detours are not included. Map: © OpenStreetMap contributors.","Parkgebühren, Blockiergebühren und Umwege sind nicht eingerechnet. Karte: © OpenStreetMap-Mitwirkende.","Parkeringsavgifter, blockeringsavgifter och omvägar ingår inte. Karta: © OpenStreetMap-bidragsgivare."],
+    foot:["Data: eurofuelprices.com (petrol, spot prices, chargers), OpenStreetMap, NOBIL, Open Charge Map. The translations may contain mistakes: tell the owner if something reads wrong.","Daten: eurofuelprices.com (Benzin, Spotpreise, Ladepunkte), OpenStreetMap, NOBIL, Open Charge Map. Die Übersetzungen können Fehler enthalten: Sag dem Betreiber Bescheid, wenn etwas falsch klingt.","Data: eurofuelprices.com (bensin, spotpriser, laddare), OpenStreetMap, NOBIL, Open Charge Map. Översättningarna kan innehålla fel: säg till ägaren om något låter fel."],
+    warnPetrol:["Petrol {x} SEK/l looks wrong.","Benzin {x} SEK/l sieht falsch aus.","Bensin {x} SEK/l ser fel ut."],
+    warnHome:["Home price {x} SEK/kWh looks wrong.","Heimpreis {x} SEK/kWh sieht falsch aus.","Hempris {x} SEK/kWh ser fel ut."],
+    warnFees:["The fee default (0.73 SEK/kWh) comes from bills of October 2026 and may be outdated. Enter the fees from your current bill.","Der Standardwert für die Aufschläge (0,73 SEK/kWh) stammt aus Rechnungen vom Oktober 2026 und kann veraltet sein. Gib die Aufschläge deiner aktuellen Rechnung ein.","Standardvärdet för påslagen (0,73 SEK/kWh) kommer från fakturor från oktober 2026 och kan vara gammalt. Ange påslagen från din aktuella faktura."],
+    fPts1:["1 point","1 Ladepunkt","1 laddpunkt"],
+    fPtsN:["{n} points","{n} Ladepunkte","{n} laddpunkter"],
+    fCable:["fixed cable (no own cable needed)","fest angeschlossenes Kabel (kein eigenes Kabel nötig)","fast kabel (egen kabel behövs inte)"],
+    fFree:["free according to the source","laut Quelle kostenlos","gratis enligt källan"],
+    fCard:["card or membership needed","Karte oder Mitgliedschaft nötig","kort eller medlemskap krävs"],
+    fNotice:["notice required","Anmeldung nötig","föranmälan krävs"],
+    fPay:["pay at the location","Bezahlung vor Ort","betala på plats"],
+    fFee:["parking fee","Parkgebühr","parkeringsavgift"],
+    fFeeHint:["parking fee mentioned (unverified)","Parkgebühr erwähnt (ungeprüft)","parkeringsavgift nämns (ej kontrollerat)"],
+    fVer:["last verified {y}","zuletzt geprüft {y}","senast kontrollerad {y}"],
+    fOld:[" (old)"," (alt)"," (gammal)"]
+  };
+
+  // ---- language, state ----
+  var Q = (typeof URLSearchParams !== "undefined") ? new URLSearchParams(location.search).get("lang") : null;
+  function detectLang(){ var q = Q || (navigator.language || "en").slice(0, 2); return LANGS.indexOf(q) >= 0 ? q : "en"; }
+  var m0 = new Date().getMonth();
+  var DEFAULT = {
+    lang:detectLang(), car:"phev", cv:null, soc:20, season:(m0 >= 9 || m0 <= 2) ? "winter" : "summer", useTemp:false,
+    hours:1, homeHours:10, homeAmp:0, area:"SE4", contract:"avg",
+    home:4.59, homeEdited:false, homeAdd:FEES_DEFAULT, feesEdited:false, petrol:15.80, petrolEdited:false,
+    tomorrow:0, trip:0, perWeek:null, log:[]
+  };
+  var AUTO = {petrol:"petrolEdited", home:"homeEdited", homeAdd:"feesEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
   try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
-  // One odd stored value must never break the page: anything that is not a finite number, or an unknown season, falls back to the default.
-  ["petrol", "home", "soc", "hours", "kw", "trip", "hold", "homeHours", "homeAmp"].forEach(function(k){ if(typeof S[k] !== "number" || !isFinite(S[k])){ S[k] = DEFAULT[k]; } });
-  if(!SEASONS[S.season]){ S.season = DEFAULT.season; }
+  function isNum(x){ return typeof x === "number" && isFinite(x); }
+  if(LANGS.indexOf(S.lang) < 0){ S.lang = DEFAULT.lang; }
+  if(Q && LANGS.indexOf(Q) >= 0){ S.lang = Q; }   // ?lang=de for links and tests, never stored
+  if(!PRESETS[S.car]){ S.car = DEFAULT.car; }
+  // One odd stored value must never break the page: anything that is not a finite number falls back to the default.
+  ["petrol", "home", "homeAdd", "soc", "hours", "homeHours", "homeAmp", "tomorrow", "trip"].forEach(function(k){ if(!isNum(S[k])){ S[k] = DEFAULT[k]; } });
+  S.cv = Object.assign({}, PRESETS[S.car].v, (S.cv && typeof S.cv === "object") ? S.cv : {});
+  CVKEYS.forEach(function(k){ if(!isNum(S.cv[k])){ S.cv[k] = PRESETS[S.car].v[k]; } });
+  var LIM = {usable:[1, 200], kw:[1, 50], hold:[0, 60], elS:[5, 80], elW:[5, 80], lS:[1, 30], lW:[1, 30]};
+  CVKEYS.forEach(function(k){ S.cv[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], S.cv[k])); });
+  if(S.season !== "winter" && S.season !== "summer"){ S.season = DEFAULT.season; }
+  if(AREAS.indexOf(S.area) < 0){ S.area = DEFAULT.area; }
+  if(CONTRACTS.indexOf(S.contract) < 0){ S.contract = DEFAULT.contract; }
+  S.useTemp = S.useTemp === true;
   S.soc = Math.min(100, Math.max(0, S.soc));
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
   S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Use my location"
-  S.hold = Math.min(60, Math.max(0, +S.hold));
-  S.hours = Math.min(12, Math.max(0.5, +S.hours || 1));
+  S.temp = null;  // outside temperature, only while it is loaded
+  S.hours = Math.min(12, Math.max(0.5, S.hours));
   S.homeHours = Math.min(24, Math.max(1, S.homeHours));
   if(S.homeAmp !== 0 && AMPS.indexOf(S.homeAmp) < 0){ S.homeAmp = 0; }
+  S.perWeek = isNum(S.perWeek) ? Math.min(14, Math.max(1, Math.round(S.perWeek))) : null;
+  S.log = (Array.isArray(S.log) ? S.log : []).filter(function(e){ return e && isNum(e.kwh) && isNum(e.km) && e.kwh > 0 && e.km > 0 && (e.s === "winter" || e.s === "summer"); }).slice(-50);
 
-  var BASE = "https://eurofuelprices.com/";
-  // From the Oct 2026 bills: variable 0.11497 + grid transfer 0.2584 + energy tax 0.36 (SEK/kWh excl. VAT). The 0.06 markup and 0.06 discount cancel until 2027-05-31.
-  var HOME_ADD = 0.73337, VAT = 1.25, HOME_ADD_VALID_TO = "2026-12-31";   // fees usually change on 1 January: warn after this date
-  var BILL = {month:10, year:2026, spot:1.5667};   // October 2026 bill: monthly spot average excl. VAT
-  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  var N = {ch:[], pe:[], pick:-1, months:[]};
+  var N = {ch:[], pe:[], pick:-1, months:[], el:null, loc:null, locSt:null, mapSt:null, locDone:false};
+  var $ = function(id){ return document.getElementById(id); };
+  function t(k, p){
+    var row = TX[k]; if(!row){ return k; }
+    var s = row[LANGS.indexOf(S.lang)] || row[0];
+    return p ? s.replace(/\{(\w+)\}/g, function(m, n){ return p[n] != null ? p[n] : m; }) : s;
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function fmt(x, d){ var s = x.toFixed(d === undefined ? 2 : d); return S.lang === "en" ? s : s.replace(".", ","); }
+  function num(v, fb){ var x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : fb; }
+  function sek(x){ return (x > 0 ? "+" : "") + fmt(x, 2) + " SEK"; }
   function hav(a,b,c,d){ var r=Math.PI/180, x=(c-a)*r, y=(d-b)*r, q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2); return 12742*Math.asin(Math.sqrt(q)); }
   function nrm(s){ return String(s||"").toLowerCase().replace(/&/g," ").replace(/\./g,"").replace(/\(.*?\)/g," ").replace(/[^a-z0-9åäöæøü ]+/g," ").replace(/\s+/g," ").trim(); }
+  function monthName(i){ try{ return new Date(2026, i, 1).toLocaleDateString(S.lang, {month:"short"}); }catch(e){ return String(i + 1); } }
   var SEJ = null;
+  function getJ(f){ return fetch(BASE + f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function getSE(){ return SEJ = SEJ || getJ("se.json").catch(function(e){ SEJ = null; throw e; }); }   // petrol prices, loaded once; a failed load is not cached, so it can retry
-  function getJ(f){ return fetch(BASE+f).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function ptype(st){ return PRESETS[st.car].type; }
   function save(){
     try{
       var d = {};
       Object.keys(DEFAULT).forEach(function(k){
         if(AUTO[k] && !S[AUTO[k]]){ return; }
-        if(JSON.stringify(S[k]) !== JSON.stringify(DEFAULT[k])){ d[k] = S[k]; }
+        var def = k === "cv" ? PRESETS[S.car].v : DEFAULT[k];
+        if(JSON.stringify(S[k]) !== JSON.stringify(def)){ d[k] = S[k]; }
       });
       if(Object.keys(d).length){ localStorage.setItem(KEY, JSON.stringify(d)); } else { localStorage.removeItem(KEY); }
     }catch(e){}
   }
-  function num(v, fb){ var x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : fb; }
-  function fmt(x, d){ return x.toFixed(d === undefined ? 2 : d); }
-  function sek(x){ return (x > 0 ? "+" : "") + fmt(x, 2) + " SEK"; }
-  var $ = function(id){ return document.getElementById(id); };
-  function home(spot){ return (spot + HOME_ADD) * VAT; }
+  function home(spot, add){ return (spot + add) * VAT; }
   function selCharger(){ return N.ch.filter(function(c){ return c.id === S.sel; })[0] || null; }
-  // Facts about a charger from the data file (ev_se.json flags). f = flag bits, yy = last verification year (2 digits), now = current year.
-  // Price-like entries (cost notes) are not used. Bit 64 means "only fixed-cable Type 2 here"; its absence says nothing, so nothing is claimed then.
-  function facts(pts, f, yy, now){
-    var a = [];
-    if(pts > 0){ a.push(pts + (pts === 1 ? " point" : " points")); }
-    if(f & 64){ a.push("fixed cable (no own cable needed)"); }
-    if(f & 1){ a.push("free according to the source"); }
-    if(f & 2){ a.push("card or membership needed"); }
-    if(f & 4){ a.push("notice required"); }
-    if(f & 8){ a.push("pay at the location"); }
-    if(f & 128){ a.push("parking fee"); } else if(f & 16){ a.push("parking fee mentioned (unverified)"); }
-    if(yy > 0){ a.push("last verified 20" + (yy < 10 ? "0" : "") + yy + (now - (2000 + yy) >= 2 ? " (old)" : "")); }
-    return a;
-  }
-  window.__facts = facts;   // for tests/calc.test.html
-  function chLabel(c){ return c.name + " · " + c.op + " · " + (c.kw ? c.kw + " kW" : "power unknown") + " · Type 2 AC" + (c.pts ? " · " + c.pts + (c.pts === 1 ? " point" : " points") : ""); }
 
+  // ---- pure logic (tested in tests/calc.test.html) ----
+  // Consumption for the current conditions: between the summer and the winter value, by season or by outside temperature
+  // (20 °C and warmer = summer value, 0 °C = winter value, colder keeps rising up to -10 °C).
+  function consumption(st){
+    var v = st.cv, w = st.temp != null ? Math.min(1.5, Math.max(0, (20 - st.temp) / 20)) : (st.season === "winter" ? 1 : 0);
+    return {el:v.elS + (v.elW - v.elS) * w, l:v.lS + (v.lW - v.lS) * w};
+  }
   // st = settings, ch = the chosen charger (or null). The road price is unknown by design: the road option only gets
   // what it can deliver (kWh, km, petrol saved) and the highest price worth paying.
   function calc(st, ch){
-    var se = SEASONS[st.season];
+    var cv = st.cv, se = consumption(st), kw = cv.kw;
     var lPerKwh = se.l / se.el, per = 100 / se.el;
     var value = lPerKwh * st.petrol;   // what 1 kWh is worth in petrol (SEK)
-    var free = USABLE_KWH * (100 - Math.max(st.soc, st.hold)) / (100 - st.hold);   // chargeable kWh: the 10.4 kWh span the display range hold..100 %
+    var free = cv.usable * (100 - Math.max(st.soc, cv.hold)) / (100 - cv.hold);   // chargeable kWh: the usable span between the hold level and 100 %
     // Home is limited like any charger: time parked x power. A household socket gives amps x 230 V; the car's limit still applies.
     // Without homeHours (old callers, tests) there is no time limit.
-    var homePw = Math.min(st.kw, st.homeAmp > 0 ? st.homeAmp * MAINS_V / 1000 : st.kw), homeKwh = Math.min(free, (st.homeHours > 0 ? st.homeHours : 1e9) * homePw);
+    var homePw = Math.min(kw, st.homeAmp > 0 ? st.homeAmp * MAINS_V / 1000 : kw), homeKwh = Math.min(free, (st.homeHours > 0 ? st.homeHours : 1e9) * homePw);
     var h = {price:st.home, kwh:homeKwh, pw:homePw, net:value - st.home, be:st.home / lPerKwh};
     h.cost = h.kwh * h.price; h.km = h.kwh * per; h.litres = h.kwh * lPerKwh; h.saved = h.kwh * value; h.total = h.net * h.kwh;
     var road = null;
     if(ch){
-      var pw = Math.min(st.kw, ch.kw || st.kw), kwh = Math.min(free, st.hours * pw);
+      var pw = Math.min(kw, ch.kw || kw), kwh = Math.min(free, st.hours * pw);
       road = {name:ch.name, op:ch.op, pw:pw, kwh:kwh, km:kwh * per, litres:kwh * lPerKwh, saved:kwh * value};
     }
     // km on electricity after `hours` at a charger of `power` kW (the car's own limit applies), and hours for a full charge
-    var at = function(hours, power){ var k = Math.min(free, hours * Math.min(st.kw, power)); return {kwh:k, km:k * per, full:k >= free - 1e-9}; };
-    var fillH = function(power){ return free / Math.min(st.kw, power); };
-    return {home:h, road:road, value:value, limit:value - MIN_GAIN, lPerKwh:lPerKwh, per:per, free:free, se:se, at:at, fillH:fillH};
+    var at = function(hours, power){ var k = Math.min(free, hours * Math.min(kw, power)); return {kwh:k, km:k * per, full:k >= free - 1e-9}; };
+    var fillH = function(power){ return free / Math.min(kw, power); };
+    return {home:h, road:road, value:value, limit:value - MIN_GAIN, lPerKwh:lPerKwh, per:per, free:free, cons:se, type:ptype(st), usable:cv.usable, hold:cv.hold, kw:kw, at:at, fillH:fillH};
   }
-  window.__calc = calc;   // for tests/calc.test.html
+  window.__calc = calc; window.__consumption = consumption; window.__presets = PRESETS;
 
-  // The recommendation as plain data (tested in tests/calc.test.html). c = result of calc(), hours = parking time.
+  // The recommendation as plain data. c = result of calc(), hours = parking time.
   function advice(c, hours){
-    var h = c.home, r = c.road, homeOk = h.net >= MIN_GAIN, a = {l2: ""};
-    var roadLine = r ? "In " + fmt(hours, 1) + " h at " + fmt(r.pw, 1) + " kW you can charge " + fmt(r.kwh, 1) + " kWh (" + fmt(r.km, 0) + " km) at " + r.name + "." : "";
+    var h = c.home, r = c.road, bev = c.type === "bev", homeOk = h.net >= MIN_GAIN, a = {l2:""};
+    var roadLine = r ? t("roadLine", {h:fmt(hours, 1), kw:fmt(r.pw, 1), kwh:fmt(r.kwh, 1), km:fmt(r.km, 0), name:r.name}) : "";
     if(c.free < 0.5){
-      a.cls = "hev"; a.big = "Do not charge"; a.act = "Do not plug in. Drive in hybrid mode.";
-      a.l1 = "The battery is practically full. Drive in hybrid mode.";
-    } else if(!homeOk){
-      a.cls = "hev"; a.big = "Drive in HEV mode";
-      a.act = h.net > 0 ? "Do not bother plugging in at home. The saving is too small." : "Do not plug in at home. Petrol is cheaper today.";
-      a.l1 = h.net > 0 ? "Home saves only " + fmt(h.net) + " SEK per kWh, below the " + fmt(MIN_GAIN) + " SEK/kWh needed to make it worth the effort." : "Charging at home costs more than petrol per km today.";
-      if(r && c.limit > 0){ a.l2 = roadLine + " On the road, charging only pays below " + fmt(c.limit) + " SEK/kWh. Check the price in the charger's app."; }
+      a.cls = "hev"; a.big = t(bev ? "doNotBev" : "doNot"); a.act = t(bev ? "fullBev" : "doNotAct"); a.l1 = t(bev ? "fullBev" : "full");
+    } else if(!bev && !homeOk){
+      a.cls = "hev"; a.big = t("hevBig"); a.act = t(h.net > 0 ? "hevAct1" : "hevAct2");
+      a.l1 = h.net > 0 ? t("hevL1a", {x:fmt(h.net), min:fmt(MIN_GAIN)}) : t("hevL1b");
+      if(r && c.limit > 0){ a.l2 = t("hevL2", {road:roadLine, x:fmt(c.limit)}); }
     } else {
-      var x = Math.min(h.price, c.limit);   // cheaper than home, and still worth the effort against petrol
-      a.cls = "home"; a.big = "Charge at home";
-      a.act = r ? "Top up at " + r.name + " only if its app shows less than " + fmt(x) + " SEK/kWh. Charge the rest at home." : "Plug in when you get home.";
-      a.l1 = fmt(h.kwh, 1) + " kWh at " + fmt(h.price) + " SEK/kWh: " + sek(h.total) + " versus petrol.";
-      a.l2 = r ? roadLine + " Any road price below the home price of " + fmt(h.price) + " SEK/kWh saves even more." : "Tap \"Use my location\" at the top, then pick a charger on the map to see the highest road price worth paying.";
+      var x = bev ? h.price : Math.min(h.price, c.limit);   // cheaper than home (and, for a hybrid, still worth the effort against petrol)
+      a.cls = "home"; a.big = t("homeBig");
+      a.act = r ? t("homeActRoad", {name:r.name, x:fmt(x)}) : t("homeAct");
+      a.l1 = t("homeL1", {kwh:fmt(h.kwh, 1), price:fmt(h.price), res:sek(h.total)});
+      if(bev && h.net < 0){ a.l2 = t("bevNeg", {x:fmt(-h.net)}); }
+      else { a.l2 = r ? t("homeL2road", {road:roadLine, price:fmt(h.price)}) : t("homeL2none"); }
     }
     return a;
   }
   window.__advice = advice;
 
+  // Facts about a charger from the data file (ev_se.json flags). f = flag bits, yy = last verification year (2 digits), now = current year.
+  // Price-like entries (cost notes) are not used. Bit 64 means "only fixed-cable Type 2 here"; its absence says nothing, so nothing is claimed then.
+  function facts(pts, f, yy, now){
+    var a = [];
+    if(pts > 0){ a.push(pts === 1 ? t("fPts1") : t("fPtsN", {n:pts})); }
+    if(f & 64){ a.push(t("fCable")); }
+    if(f & 1){ a.push(t("fFree")); }
+    if(f & 2){ a.push(t("fCard")); }
+    if(f & 4){ a.push(t("fNotice")); }
+    if(f & 8){ a.push(t("fPay")); }
+    if(f & 128){ a.push(t("fFee")); } else if(f & 16){ a.push(t("fFeeHint")); }
+    if(yy > 0){ a.push(t("fVer", {y:"20" + (yy < 10 ? "0" : "") + yy}) + (now - (2000 + yy) >= 2 ? t("fOld") : "")); }
+    return a;
+  }
+  window.__facts = facts;
+  function chLabel(c){ return c.name + " · " + (c.op === "operator unknown" ? t("opUnknown") : c.op) + " · " + (c.kw ? c.kw + " kW" : t("chPower")) + " · Type 2 AC" + (c.pts ? " · " + (c.pts === 1 ? t("fPts1") : t("fPtsN", {n:c.pts})) : ""); }
+
+  // Chargers around a position, nearest first: one entry per site and operator, Type 2 AC up to 22 kW, the 150 nearest.
+  function buildChargers(ev, la, lo){
+    if(ev.v !== 1){ throw 0; }   // column layout is only known for version 1
+    var seen = {};
+    return ev.s.map(function(x){
+      var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
+      // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
+      return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
+    }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
+      .sort(function(a, b){ return a.dist - b.dist; }).slice(0, 150);
+  }
+  window.__chargers = buildChargers;
+
+  // Month list for the home price chips. a = spot data of one price area (elpris.json), y = this year, add = fees on top of the spot price.
+  // Early in the year the "last 3 months" come from the year before (else 1 or 2 days would decide everything).
+  function forecast(a, y, add){
+    var m = a.monthly[String(y)] || [], prev = a.monthly[String(y - 1)] || [], i = m.length - 1;
+    while(i >= 0 && m[i] == null){ i--; }
+    if(i < 0){ return null; }
+    var typ = function(k){
+      var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
+      return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
+    };
+    var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i + 1);
+    var rat = [], k;
+    for(k = i - 2; k <= i; k++){ var v = k >= 0 ? m[k] : prev[k + 12], tk = typ((k + 12) % 12); if(v != null && tk > 0){ rat.push(v / tk); } }
+    if(!rat.length){ return null; }
+    var f = Math.min(5, rat.reduce(function(s, x){ return s + x; }, 0) / rat.length);   // capped so one odd month cannot blow up the estimate
+    var list = [], lastV = i >= 1 ? m[i - 1] : prev[11];
+    if(lastV != null){ list.push({idx:(i + 11) % 12, spot:lastV, kk:"kindLast", kp:{}}); }
+    var tc = typ(i);
+    if(part && tc > 0){
+      // The bill uses the whole-month average: known days + estimate for the rest of the month.
+      var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
+      list.push({idx:i, spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc, add), hi:home(m[i], add), kk:"kindEst", kp:{d:a.partial.days, n:dim, a:m[i]}});
+    } else {
+      list.push({idx:i, spot:m[i], kk:"kindMonth", kp:{}});
+    }
+    for(k = 1; k <= 3; k++){
+      var mi = (i + k) % 12, tt = typ(mi);
+      if(tt > 0){ list.push({idx:mi, spot:tt * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(tt, add), hi:home(tt * f, add), kk:"kindFc", kp:{}}); }
+    }
+    return {months:list.map(function(x){ x.price = home(x.spot, add); return x; }), f:f, i:i};
+  }
+  window.__forecast = forecast;
+
+  // Hourly contract: the n cheapest hours of the next 24 h (today from now on, tomorrow up to the same hour, as far as published).
+  // Returns the average spot price and the hours, or null without usable data for today.
+  function cheapestHours(a, now, n){
+    if(!a || !a.today || !a.today.sek){ return null; }
+    var pad = function(x){ return (x < 10 ? "0" : "") + x; };
+    if(a.today.date !== now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate())){ return null; }   // stale data
+    var h0 = now.getHours(), list = [];
+    a.today.sek.forEach(function(p, h){ if(p != null && h >= h0){ list.push({p:p, o:h}); } });
+    if(a.tomorrow && a.tomorrow.sek){ a.tomorrow.sek.forEach(function(p, h){ if(p != null && h < h0){ list.push({p:p, o:24 + h}); } }); }
+    if(!list.length){ return null; }
+    var pick = list.slice().sort(function(x, y){ return x.p - y.p; }).slice(0, Math.min(n, list.length)).sort(function(x, y){ return x.o - y.o; });
+    return {avg:pick.reduce(function(s, x){ return s + x.p; }, 0) / pick.length, hours:pick.map(function(x){ return pad(x.o % 24) + ":00"; })};
+  }
+  window.__cheapest = cheapestHours;
+
+  // Real consumption per season from the log: kWh at the socket / electric km. Needs at least 20 km per season.
+  function logStats(log){
+    var out = {};
+    ["winter", "summer"].forEach(function(s){
+      var e = log.filter(function(x){ return x.s === s; }), kwh = 0, km = 0;
+      e.forEach(function(x){ kwh += x.kwh; km += x.km; });
+      out[s] = {n:e.length, km:km, kwh:kwh, per100:km >= 20 ? kwh / km * 100 : null};
+    });
+    return out;
+  }
+  window.__logStats = logStats;
+
+  // Tomorrow's distance: kWh needed on electricity, what the battery holds, what to charge. c = result of calc() plus soc.
+  function tomorrow(c, km){
+    var need = km * c.cons.el / 100, have = c.usable * (Math.max(c.soc, c.hold) - c.hold) / (100 - c.hold);
+    var short = Math.min(Math.max(0, need - have), c.usable - have);
+    return {need:need, have:have, short:short, enough:need <= have, tooLong:need > c.usable, hours:short / c.home.pw, cost:short * c.home.price, useKm:c.usable / c.cons.el * 100};
+  }
+  window.__tomorrow = tomorrow;
+
+  // Per year, charging at home perWeek times from empty to full, half a year with summer and half with winter values.
+  function yearly(st, perWeek){
+    var out = {sek:0, kwh:0, l:0};
+    ["summer", "winter"].forEach(function(sn){
+      var c = calc(Object.assign({}, st, {season:sn, temp:null, soc:st.cv.hold}), null), n = perWeek * 26;
+      out.sek += c.home.total * n; out.kwh += c.home.kwh * n; out.l += c.home.litres * n;
+    });
+    return out;
+  }
+  window.__yearly = yearly; window.__tx = TX;
+
+  // ---- rendering ----
+  function tile(cap, big, unit, st, ok){ return '<div class="tile"><div class="cap">' + cap + '</div><div class="big">' + big + '</div><div class="unit">' + unit + '</div><div class="st ' + (ok ? "pos" : "neg") + '">' + st + '</div></div>'; }
+
   function renderVerdict(c){
     var r = advice(c, S.hours), el = $("verdict");
     el.className = "verdict " + r.cls;
-    el.innerHTML = '<p class="lab">Recommendation · do this now</p><p class="big" style="font-size:' + (r.big.length > 24 ? 30 : 40) + 'px">' + r.big + '</p><p class="act">' + esc(r.act) + '</p><p class="sub">' + esc(r.l1) + '</p>' + (r.l2 ? '<p class="sub">' + esc(r.l2) + '</p>' : '');
-  }
-
-  function tile(cap, big, unit, st, ok){ return '<div class="tile"><div class="cap">' + cap + '</div><div class="big">' + big + '</div><div class="unit">' + unit + '</div><div class="st ' + (ok ? "pos" : "neg") + '">' + st + '</div></div>'; }
-  // Time at the charger -> km on electricity: household socket at 6-16 A, and stations (the car's limit is the maximum power).
-  var TIMES = [0.5, 1, 2, 3, 4, 6, 8, 10, 12];
-  function renderTime(c){
-    var cols = AMPS.map(function(a){ return {t:a + " A", p:a * MAINS_V / 1000, home:S.homeAmp === a}; });
-    cols.push({t:"Station", p:S.kw, home:false});
-    var rows = TIMES.slice();
-    [S.hours, S.homeHours].forEach(function(x){ if(rows.indexOf(x) < 0){ rows.push(x); } });
-    rows.sort(function(a, b){ return a - b; });
-    var t = '<tr><th>Time</th>' + cols.map(function(k){ return '<th>' + k.t + (k.home ? ' (home)' : '') + '<br><span class="small">' + fmt(Math.min(S.kw, k.p), 1) + ' kW</span></th>'; }).join('') + '</tr>';
-    rows.forEach(function(h){
-      var tag = (c.road && h === S.hours ? " · road stop" : "") + (h === S.homeHours ? " · at home" : "");
-      t += '<tr><td>' + fmt(h, h % 1 ? 1 : 0) + ' h<span class="small">' + tag + '</span></td>' + cols.map(function(k){
-        var r = c.at(h, k.p);
-        return '<td>' + (r.full ? 'full<br>' : '') + fmt(r.km, 0) + ' km<br><span class="small">' + fmt(r.kwh, 1) + ' kWh</span></td>';
-      }).join('') + '</tr>';
-    });
-    t += '<tr><td><b>Full charge</b></td>' + cols.map(function(k){ return '<td>' + fmt(c.fillH(k.p), 1) + ' h<br><span class="small">' + fmt(c.free * c.per, 0) + ' km</span></td>'; }).join('') + '</tr>';
-    $("timetab").innerHTML = t;
-    $("fillnote").textContent = "From your battery level, a full charge is " + fmt(c.free, 1) + " kWh (" + fmt(c.free * c.per, 0) + " km). The car's limit is " + fmt(S.kw, 1) + " kW: 16 A (" + fmt(16 * MAINS_V / 1000, 2) + " kW), wallboxes and all stations give the same result.";
+    el.innerHTML = '<p class="lab">' + esc(t("rec")) + '</p><p class="big" style="font-size:' + (r.big.length > 24 ? 30 : 40) + 'px">' + esc(r.big) + '</p><p class="act">' + esc(r.act) + '</p><p class="sub">' + esc(r.l1) + '</p>' + (r.l2 ? '<p class="sub">' + esc(r.l2) + '</p>' : '');
   }
 
   function renderBreak(c){
     var h = c.home, mp = S.petrol - h.be, me = c.value - h.price, r = c.road;
-    var t = '<h3 style="font-size:14px;margin:8px 0 0">Home</h3><div class="tiles">' +
-      tile("Petrol break-even", fmt(h.be), "SEK/l · today " + fmt(S.petrol), mp >= 0 ? "Charging wins: petrol is " + fmt(mp) + " above" : "Petrol wins: petrol is " + fmt(-mp) + " below", mp >= 0) +
-      tile("Electricity break-even", fmt(c.value), "SEK/kWh · today " + fmt(h.price), me >= 0 ? "Charging wins: electricity is " + fmt(me) + " below" : "Petrol wins: electricity is " + fmt(-me) + " above", me >= 0) + '</div>';
+    var out = '<h3 style="font-size:14px;margin:8px 0 0">' + t("beHome") + '</h3><div class="tiles">' +
+      tile(t("tPetrolBE"), fmt(h.be), t("unitPetrol", {x:fmt(S.petrol)}), mp >= 0 ? t("winP", {x:fmt(mp)}) : t("loseP", {x:fmt(-mp)}), mp >= 0) +
+      tile(t("tElBE"), fmt(c.value), t("unitEl", {x:fmt(h.price)}), me >= 0 ? t("winE", {x:fmt(me)}) : t("loseE", {x:fmt(-me)}), me >= 0) + '</div>';
     if(r){
-      t += '<h3 style="font-size:14px;margin:8px 0 0">On the road: ' + esc(r.name) + '</h3><div class="tiles">' +
-        tile("Electricity break-even", fmt(c.value), "SEK/kWh · petrol " + fmt(S.petrol) + " SEK/l", "Above this price petrol is cheaper", true) +
-        tile("Worth paying up to", fmt(Math.max(0, Math.min(h.price, c.limit))), "SEK/kWh", "Cheaper than home and worth the effort", true) + '</div>';
+      out += '<h3 style="font-size:14px;margin:8px 0 0">' + esc(t("beRoad", {name:r.name})) + '</h3><div class="tiles">' +
+        tile(t("tElBE"), fmt(c.value), t("unitElP", {x:fmt(S.petrol)}), t("aboveThis"), true) +
+        tile(t("tWorth"), fmt(Math.max(0, c.type === "bev" ? h.price : Math.min(h.price, c.limit))), t("unitKwh"), t("cheaperHome"), true) + '</div>';
     }
-    $("be").innerHTML = t;
+    $("be").innerHTML = out;
+  }
+
+  var TIMES = [0.5, 1, 2, 3, 4, 6, 8, 10, 12];
+  function renderTime(c){
+    var cols = AMPS.map(function(a){ return {t:a + " A", p:a * MAINS_V / 1000, home:S.homeAmp === a}; });
+    cols.push({t:t("colStation"), p:c.kw, home:false});
+    var rows = TIMES.slice();
+    [S.hours, S.homeHours].forEach(function(x){ if(rows.indexOf(x) < 0){ rows.push(x); } });
+    rows.sort(function(a, b){ return a - b; });
+    var out = '<tr><th>' + t("colTime") + '</th>' + cols.map(function(k){ return '<th>' + k.t + (k.home ? ' ' + t("tagHome") : '') + '<br><span class="small">' + fmt(Math.min(c.kw, k.p), 1) + ' kW</span></th>'; }).join('') + '</tr>';
+    rows.forEach(function(h){
+      var tag = (c.road && h === S.hours ? t("tagRoad") : "") + (h === S.homeHours ? t("tagAtHome") : "");
+      out += '<tr><td>' + fmt(h, h % 1 ? 1 : 0) + ' h<span class="small">' + tag + '</span></td>' + cols.map(function(k){
+        var r = c.at(h, k.p);
+        return '<td>' + (r.full ? t("fullWord") + '<br>' : '') + fmt(r.km, 0) + ' km<br><span class="small">' + fmt(r.kwh, 1) + ' kWh</span></td>';
+      }).join('') + '</tr>';
+    });
+    out += '<tr><td><b>' + t("fullCharge") + '</b></td>' + cols.map(function(k){ return '<td>' + fmt(c.fillH(k.p), 1) + ' h<br><span class="small">' + fmt(c.free * c.per, 0) + ' km</span></td>'; }).join('') + '</tr>';
+    $("timetab").innerHTML = out;
+    $("fillnote").textContent = t("fillNote", {kwh:fmt(c.free, 1), km:fmt(c.free * c.per, 0), kw:fmt(c.kw, 1)});
   }
 
   function renderCompare(c){
-    var h = c.home, r = c.road, i, p;
-    var out = '<div class="cmp"><h3><span>Charge at home</span></h3>' +
-      '<p>At home you are parked ' + fmt(S.homeHours, 0) + ' h at ' + fmt(h.pw, 1) + ' kW: up to ' + fmt(S.homeHours * h.pw, 1) + ' kWh are possible; the battery has room for ' + fmt(c.free, 1) + ' kWh. So ' + fmt(h.kwh, 1) + ' kWh (' + fmt(h.km, 0) + ' km) are charged.</p>' +
-      '<p><b>You pay:</b> ' + fmt(h.kwh, 1) + ' kWh × ' + fmt(h.price) + ' = ' + fmt(h.cost) + ' SEK</p>' +
-      '<p><b>You save on petrol:</b> ' + fmt(h.km, 0) + ' km electric = ' + fmt(h.litres, 1) + ' l = ' + fmt(h.saved) + ' SEK</p>' +
-      '<p><b>Result:</b> <span class="net ' + (h.total >= 0 ? "pos" : "neg") + '">' + sek(h.total) + '</span> (' + sek(h.net) + ' per kWh)</p></div>';
+    var h = c.home, r = c.road, bev = c.type === "bev";
+    var out = '<div class="cmp"><h3><span>' + t("cmpHome") + '</span></h3>' +
+      '<p>' + t("cmpHomeText", {h:fmt(S.homeHours, 0), kw:fmt(h.pw, 1), max:fmt(S.homeHours * h.pw, 1), room:fmt(c.free, 1), kwh:fmt(h.kwh, 1), km:fmt(h.km, 0)}) + '</p>' +
+      '<p><b>' + t("youPay") + '</b> ' + t("payLine", {kwh:fmt(h.kwh, 1), price:fmt(h.price), cost:fmt(h.cost)}) + '</p>' +
+      '<p><b>' + t("youSave") + '</b> ' + t("saveLine", {km:fmt(h.km, 0), l:fmt(h.litres, 1), sek:fmt(h.saved)}) + '</p>' +
+      '<p><b>' + t("result") + '</b> <span class="net ' + (h.total >= 0 ? "pos" : "neg") + '">' + sek(h.total) + '</span> (' + sek(h.net) + ' ' + t("perKwh") + ')</p></div>';
     if(r){
       out += '<div class="cmp"><h3><span>' + esc(r.name) + '</span></h3>' +
-        '<p>' + esc(r.op) + ' · ' + fmt(r.pw, 1) + ' kW · Type 2 AC</p>' +
-        '<p>In ' + fmt(S.hours, 1) + ' h you can charge ' + fmt(S.hours * r.pw, 1) + ' kWh; the battery has room for ' + fmt(c.free, 1) + ' kWh. So ' + fmt(r.kwh, 1) + ' kWh (' + fmt(r.km, 0) + ' km, ' + fmt(r.litres, 1) + ' l of petrol) are charged.</p>' +
-        '<p><b>Worth up to:</b> ' + fmt(r.saved) + ' SEK in petrol, so pay at most ' + fmt(c.value) + ' SEK/kWh (' + fmt(Math.max(0, c.limit)) + ' to make it worth the effort).</p>' +
-        '<p class="small">If the charger\'s app shows this price:</p><table><tr><th>App price (SEK/kWh)</th><th>You pay</th><th>vs petrol</th><th>vs home</th></tr>';
+        '<p>' + esc(r.op === "operator unknown" ? t("opUnknown") : r.op) + ' · ' + fmt(r.pw, 1) + ' kW · Type 2 AC</p>' +
+        '<p>' + t("roadText", {h:fmt(S.hours, 1), max:fmt(S.hours * r.pw, 1), room:fmt(c.free, 1), kwh:fmt(r.kwh, 1), km:fmt(r.km, 0), l:fmt(r.litres, 1)}) + '</p>' +
+        '<p><b>' + t("worthLine", {sek:fmt(r.saved), be:fmt(c.value), lim:fmt(Math.max(0, c.limit))}) + '</b></p>' +
+        '<p class="small">' + t("appPrice") + '</p><div class="tablewrap"><table><tr><th>' + t("thAppPrice") + '</th><th>' + t("thPay") + '</th><th>' + t("thVsPetrol") + '</th><th>' + t("thVsHome") + '</th></tr>';
       [3, 4, 5, 6, 7].forEach(function(p){
         var cost = r.kwh * p, vp = r.saved - cost, vh = (h.price - p) * r.kwh;
         out += '<tr><td>' + p + '</td><td>' + fmt(cost) + '</td><td class="' + (vp >= 0 ? "pos" : "neg") + '">' + sek(vp) + '</td><td class="' + (vh >= 0 ? "pos" : "neg") + '">' + sek(vh) + '</td></tr>';
       });
-      out += '</table><p class="small">And if petrol were different:</p><table><tr><th>Petrol (SEK/l)</th><th>Break-even (SEK/kWh)</th><th>Worth the effort up to</th></tr>';
+      out += '</table></div><p class="small">' + t("petrolDiff") + '</p><div class="tablewrap"><table><tr><th>' + t("thPetrol") + '</th><th>' + t("thBE") + '</th><th>' + t("thWorth") + '</th></tr>';
       [-3, 0, 3].forEach(function(d){
         var pp = S.petrol + d; if(pp <= 0){ return; }
-        out += '<tr><td>' + fmt(pp) + (d === 0 ? ' (today)' : '') + '</td><td>' + fmt(c.lPerKwh * pp) + '</td><td>' + fmt(Math.max(0, c.lPerKwh * pp - MIN_GAIN)) + '</td></tr>';
+        out += '<tr><td>' + fmt(pp) + (d === 0 ? ' ' + t("today") : '') + '</td><td>' + fmt(c.lPerKwh * pp) + '</td><td>' + fmt(Math.max(0, c.lPerKwh * pp - MIN_GAIN)) + '</td></tr>';
       });
-      out += '</table></div>';
+      out += '</table></div></div>';
     }
-    out += '<div class="cmp"><h3><span>Do not charge (HEV mode)</span></h3><p>The car runs on petrol and keeps the charge level. Electricity cost: 0 SEK. Every option above is measured against this: its result is what you save compared with driving the same kilometres on petrol.</p></div>';
+    out += '<div class="cmp"><h3><span>' + t(bev ? "cmpBevTitle" : "cmpHevTitle") + '</span></h3><p>' + t(bev ? "cmpBevText" : "cmpHevText") + '</p></div>';
     $("cmp").innerHTML = out;
-    $("rate").textContent = "1 kWh from the socket gives " + fmt(c.per, 1) + " km electric (" + c.se.el + " kWh/100 km), which replaces " + fmt(c.lPerKwh, 2) + " l of petrol (" + c.se.l + " l/100 km). At " + fmt(S.petrol) + " SEK/l that is worth " + fmt(c.value) + " SEK per kWh. Gain per kWh = that value minus the electricity price. Below " + fmt(MIN_GAIN) + " SEK/kWh, or with an almost full battery, the advice is HEV mode. On the road the price is not known: the highest price worth paying is the value per kWh (break-even); minus " + fmt(MIN_GAIN) + " it is worth the effort.";
+    $("rate").textContent = t("rateText", {km:fmt(c.per, 1), el:fmt(c.cons.el, 1), l:fmt(c.lPerKwh, 2), lp:fmt(c.cons.l, 1), p:fmt(S.petrol), v:fmt(c.value), min:fmt(MIN_GAIN)});
   }
 
-  // Trip: electric km = battery now + charge on site (chosen charger, capped at one full battery, assumed to happen mid-trip).
-  function renderTrip(c){
-    var o = $("tripout"), km = S.trip || 0;
-    if(km <= 0){ o.textContent = "Enter the round-trip distance to see if it works fully electric."; return; }
-    var batt = USABLE_KWH * (Math.max(S.soc, S.hold) - S.hold) / (100 - S.hold);
-    var r = c.road, add = r ? Math.min(USABLE_KWH, S.hours * r.pw) : 0;
-    var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
-    var t = "Battery now: " + fmt(kmBatt, 0) + " km" + (r ? ". With " + fmt(S.hours, 1) + " h at " + r.name + ": " + fmt(kmAll, 0) + " km." : ". Pick a charger on the map to add charging on site.");
-    if(kmAll >= km){ t += " Fully electric: yes (" + fmt(km, 0) + " km trip)."; }
+  function renderDistance(c){
+    var km = S.tomorrow || 0, o = $("tomout");
+    if(km <= 0){ o.textContent = t("tomHint"); }
     else {
-      var l = (km - kmAll) * c.se.l / 100;
-      t += " Fully electric: no. About " + fmt(km - kmAll, 0) + " km on petrol = " + fmt(l, 1) + " l = " + fmt(l * S.petrol) + " SEK.";
+      var d = tomorrow(c, km), bev = c.type === "bev";
+      var base = {km:fmt(km, 0), need:fmt(d.need, 1), have:fmt(d.have, 1)};
+      if(d.enough){ o.textContent = t("tomEnough", Object.assign(base, {more:bev ? "" : t("tomMorePhev")})); }
+      else if(d.tooLong){ o.textContent = t("tomMore", Object.assign(base, {use:fmt(c.usable, 1), range:fmt(d.useKm, 0), short:fmt(d.short, 1), h:fmt(d.hours, 1), rest:fmt(km - d.useKm, 0), how:t(bev ? "howBev" : "howPhev")})); }
+      else { o.textContent = t("tomCharge", Object.assign(base, {short:fmt(d.short, 1), h:fmt(d.hours, 1), kw:fmt(c.home.pw, 1), cost:fmt(d.cost)})); }
     }
-    o.textContent = t;
+    var tr = S.trip || 0, to = $("tripout");
+    if(tr <= 0){ to.textContent = t("tripHint"); return; }
+    var batt = c.usable * (Math.max(S.soc, c.hold) - c.hold) / (100 - c.hold), r = c.road, add = r ? Math.min(c.usable, S.hours * r.pw) : 0;
+    var kmBatt = batt * c.per, kmAll = (batt + add) * c.per;
+    var s = t("tripBatt", {km:fmt(kmBatt, 0)}) + (r ? t("tripWith", {h:fmt(S.hours, 1), name:r.name, km:fmt(kmAll, 0)}) : t("tripPick"));
+    if(kmAll >= tr){ s += t("tripYes", {km:fmt(tr, 0)}); }
+    else if(c.type === "bev"){ s += t("tripNoBev", {kwh:fmt((tr - kmAll) / c.per, 0), km:fmt(tr - kmAll, 0)}); }
+    else { var l = (tr - kmAll) * c.cons.l / 100; s += t("tripNoPhev", {km:fmt(tr - kmAll, 0), l:fmt(l, 1), sek:fmt(l * S.petrol)}); }
+    to.textContent = s;
+  }
+
+  function renderYear(st){
+    var pw = S.perWeek != null ? S.perWeek : PRESETS[S.car].perWeek, y = yearly(st, pw);
+    $("perweekv").textContent = pw + "×";
+    $("yearout").textContent = t(y.sek < 0 ? "yearNeg" : "yearOut", {sek:fmt(Math.abs(y.sek), 0), kwh:fmt(y.kwh, 0), l:fmt(y.l, 0), n:pw});
+  }
+
+  function renderLog(){
+    var st = logStats(S.log), out = "";
+    $("loglist").innerHTML = S.log.slice().reverse().map(function(e, k){
+      var idx = S.log.length - 1 - k;
+      return '<div>' + esc(t("logEntry", {d:e.d || "", s:t(e.s), kwh:fmt(e.kwh, 1), km:fmt(e.km, 0), per:fmt(e.kwh / e.km * 100, 1)})) + ' <button class="chip" data-del="' + idx + '" style="padding:2px 8px;font-size:12px">' + t("logDel") + '</button></div>';
+    }).join("");
+    ["winter", "summer"].forEach(function(s){
+      var x = st[s];
+      if(!x.n){ return; }
+      out += '<p style="margin:6px 0">' + (x.per100 != null
+        ? esc(t("logSum", {s:t(s), per:fmt(x.per100, 1), km:fmt(x.km, 0), n:x.n})) + ' <button class="chip" data-use="' + s + '" style="padding:2px 8px;font-size:12px">' + t(s === "winter" ? "logUseW" : "logUseS") + '</button>'
+        : esc(t("logNeed", {s:t(s)}))) + '</p>';
+    });
+    $("logsum").innerHTML = out;
   }
 
   // Map of the chargers around you. Tap a marker to choose the charger.
@@ -438,16 +892,16 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(!window.L){
       // Leaflet is loaded after the page (defer) and may arrive after the data: try again when everything has loaded.
       if(document.readyState !== "complete"){ window.addEventListener("load", function(){ drawMap(la, lo); }, {once:true}); return; }
-      $("mapmsg").textContent = "The map could not be loaded (offline?). The chargers are still counted: the nearest one is selected."; return;
+      N.mapSt = "mapFail"; notes(); return;
     }
-    $("mapmsg").textContent = N.ch.length ? "Tap a charger to select it. Orange = charger, green = selected, blue = you." : "No Type 2 charger found near you.";
+    N.mapSt = N.ch.length ? "mapReady" : "mapNone"; notes();
     if(!MAP.map){
       MAP.map = L.map("map", {zoomControl:true});
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap contributors"}).addTo(MAP.map);
     }
     Object.keys(MAP.markers).forEach(function(id){ MAP.markers[id].remove(); }); MAP.markers = {};
     if(MAP.me){ MAP.me.remove(); }
-    MAP.me = L.circleMarker([la, lo], {radius:8, color:"#fff", weight:3, fillColor:"#1f5fa8", fillOpacity:1}).addTo(MAP.map).bindTooltip("You");
+    MAP.me = L.circleMarker([la, lo], {radius:8, color:"#fff", weight:3, fillColor:"#1f5fa8", fillOpacity:1}).addTo(MAP.map);
     N.ch.forEach(function(c){
       var m = L.circleMarker([c.lat, c.lon], {radius:7}).addTo(MAP.map).bindTooltip(esc(chLabel(c)));
       m.on("click", function(){ S.sel = c.id; update(); });
@@ -461,18 +915,20 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function renderChSelect(){
     var sel = $("chsel");
     $("chselwrap").hidden = !N.ch.length;
-    sel.innerHTML = '<option value="">No charger (home only)</option>' + N.ch.map(function(c){ return '<option value="' + esc(c.id) + '">' + esc(fmt(c.dist, 1) + " km · " + chLabel(c)) + '</option>'; }).join("");
+    sel.innerHTML = '<option value="">' + esc(t("chNone")) + '</option>' + N.ch.map(function(c){ return '<option value="' + esc(c.id) + '">' + esc(fmt(c.dist, 1) + " km · " + chLabel(c)) + '</option>'; }).join("");
     sel.value = S.sel || "";
   }
   function renderChInfo(){
     var c = selCharger(), el = $("chinfo");
     if($("chsel").value !== (S.sel || "")){ $("chsel").value = S.sel || ""; }
     if(!N.ch.length){ el.innerHTML = ""; return; }
+    var opn = c && (c.op === "operator unknown" ? t("opUnknown") : c.op);
     el.innerHTML = (c
-      ? '<b>' + esc(c.name) + '</b><br>Operator: ' + esc(c.op) + ' · Power: ' + (c.kw ? c.kw + ' kW' : 'unknown') + ' · Connector: Type 2 AC · ' + fmt(c.dist, 1) + ' km away <button class="chip" id="chclear" style="padding:2px 8px;font-size:12px">clear</button>' +
-        '<br><span class="small">' + esc(facts(c.pts, c.f, c.yy, new Date().getFullYear()).join(" · ")) + '</span>'
-      : 'No charger selected: the comparison uses home only. Tap a charger on the map.') +
-      (N.evsrc ? '<p class="hint">Charger data: ' + esc(N.evsrc.by.join(", ")) + (N.evsrc.gen ? ', file of ' + esc(N.evsrc.gen) + (N.evsrc.old ? ' (old: the charger data has not been refreshed for over 3 weeks)' : '') : '') + '.</p>' : '');
+      ? '<b>' + esc(c.name) + '</b><br>' + esc(t("chInfo", {op:opn, kw:c.kw ? c.kw + " kW" : t("chPower"), km:fmt(c.dist, 1)})) + ' <button class="chip" id="chclear" style="padding:2px 8px;font-size:12px">' + t("chClear") + '</button>' +
+        '<br><span class="small">' + esc(facts(c.pts, c.f, c.yy, new Date().getFullYear()).join(" · ")) + '</span>' +
+        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + c.lat + ',' + c.lon + '" target="_blank" rel="noopener">' + t("navigate") + '</a> · <a href="https://duckduckgo.com/?q=' + encodeURIComponent((c.op === "operator unknown" ? c.name : c.op) + " laddning pris kWh") + '" target="_blank" rel="noopener">' + t("findPrice") + '</a>'
+      : t("chNoSel")) +
+      (N.evsrc ? '<p class="hint">' + esc(t("chData", {src:N.evsrc.by.join(", "), gen:(N.evsrc.gen ? t("chFile", {d:N.evsrc.gen}) : "") + (N.evsrc.old ? t("chOld") : "")})) + '</p>' : '');
   }
 
   function renderPetrols(){
@@ -483,7 +939,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       var d = document.createElement("div"); d.className = "opt";
       d.innerHTML = '<input type="radio" name="pp" id="pp' + i + '" ' + (N.pick === i ? "checked" : "") + '>' +
         '<label class="name" for="pp' + i + '">' + esc(p.name) + '</label><b>' + fmt(p.price) + '</b>' +
-        '<span class="meta">' + fmt(p.dist, 1) + ' km · ' + (p.date ? "as of " + p.date : "date unknown") + '</span>';
+        '<span class="meta">' + esc(t("petMeta", {km:fmt(p.dist, 1), when:p.date ? t("petAsOf", {d:p.date}) : t("petNoDate")})) + '</span>';
       w.appendChild(d);
       d.querySelector("input").addEventListener("change", function(){ N.pick = i; S.petrol = p.price; S.petrolEdited = false; save(); syncInputs(); update(); });
     });
@@ -491,35 +947,26 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   function renderMonths(){
     var w = $("months"); w.innerHTML = "";
+    if(S.contract !== "avg"){ return; }
     N.months.forEach(function(m){
       var b = document.createElement("button"); b.className = "chip";
       b.setAttribute("aria-pressed", Math.abs(S.home - m.price) < 0.005 ? "true" : "false");
-      b.innerHTML = '<b>' + m.label + '</b>: ' + fmt(m.price) + '<br><span class="small">' + m.kind + ', spot ' + fmt(m.spot) + (m.lo ? '<br>range ' + fmt(m.lo) + ' to ' + fmt(m.hi) : '') + '</span>';
+      var kp = Object.assign({}, m.kp); if(kp.a != null){ kp.a = fmt(kp.a); }
+      b.innerHTML = '<b>' + esc(monthName(m.idx)) + '</b>: ' + fmt(m.price) + '<br><span class="small">' + esc(t(m.kk, kp)) + t("monthSpot", {x:fmt(m.spot)}) + (m.lo ? '<br>' + t("monthRange", {a:fmt(m.lo), b:fmt(m.hi)}) : '') + '</span>';
       b.addEventListener("click", function(){ S.home = Math.round(m.price * 100) / 100; syncInputs(); update(); });   // a chip is a choice for this visit only
       w.appendChild(b);
     });
   }
 
-  // Chargers around a position, nearest first (pure, tested): one entry per site and operator, Type 2 AC up to 22 kW, the 150 nearest.
-  function buildChargers(ev, la, lo){
-    if(ev.v !== 1){ throw 0; }   // column layout of ev_se.json is only known for version 1
-    var seen = {};
-    return ev.s.map(function(x){
-      var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
-      // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
-      return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
-    }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
-      .sort(function(a, b){ return a.dist - b.dist; }).slice(0, 150);
-  }
-  window.__chargers = buildChargers;   // for tests/calc.test.html
-
+  // ---- loading data ----
+  function setLoc(k, p, far){ N.locSt = {k:k, p:p || {}, far:far}; notes(); }
   function locate(){
-    var msg = $("locmsg");
-    msg.textContent = "Finding your location …";
-    if(!navigator.geolocation){ msg.textContent = "This browser cannot determine your location."; return; }
+    setLoc("locFinding");
+    if(!navigator.geolocation){ setLoc("locNoGeo"); return; }
     navigator.geolocation.getCurrentPosition(function(pos){
       var la = pos.coords.latitude, lo = pos.coords.longitude;
-      msg.textContent = "Loading chargers and petrol prices …";
+      N.loc = {la:la, lo:lo};
+      setLoc("locLoading");
       Promise.all([getJ("ev_se.json"), getSE()]).then(function(r){
         var ev = r[0];
         N.evsrc = {old:Date.now() - Date.parse(ev.generated) > 21 * 864e5, gen:String(ev.generated || ""), by:(ev.sources || []).map(function(n){ return n === "NOBIL" ? "NOBIL by Enova (CC BY 4.0)" : n === "OCM" ? "Open Charge Map contributors (CC BY 4.0)" : String(n); })};
@@ -535,12 +982,21 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         N.pick = -1; N.pe.forEach(function(p, i){ var b = N.pe[N.pick]; if(N.pick < 0 || (p.fresh && !b.fresh) || (p.fresh === b.fresh && p.price < b.price)){ N.pick = i; } });
         if(N.pick >= 0){ S.petrol = N.pe[N.pick].price; S.petrolEdited = false; }
         save();
-        msg.textContent = "Location found (accuracy about " + Math.round(pos.coords.accuracy) + " m). The cheapest nearby petrol and the nearest charger are preselected; change them below." +
-          (N.ch.length && N.ch[0].dist > 30 ? " Note: the nearest charger is " + fmt(N.ch[0].dist, 0) + " km away." : "");
-        if(!N.pe.length){ $("petrols").textContent = "No petrol price within 50 km of you."; }
-        renderPetrols(); renderChSelect(); syncInputs(); update(); drawMap(la, lo);
-      }).catch(function(){ msg.textContent = "Could not load data from eurofuelprices.com."; });
-    }, function(){ msg.textContent = "No location. Allow location access in the browser and try again."; }, {timeout:15000});
+        N.locDone = true;
+        N.locSt = {k:"locDone", p:{acc:Math.round(pos.coords.accuracy)}, far:(N.ch.length && N.ch[0].dist > 30) ? N.ch[0].dist : null};
+        syncInputs(); update(); drawMap(la, lo);
+        if(S.useTemp){ loadTemp(); }
+      }).catch(function(){ setLoc("locErr"); });
+    }, function(){ setLoc("locDenied"); }, {timeout:15000});
+  }
+
+  // Outside temperature at the rounded position (opt-in). Open-Meteo needs no key.
+  function loadTemp(){
+    if(!N.loc){ return; }
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=" + N.loc.la.toFixed(1) + "&longitude=" + N.loc.lo.toFixed(1) + "&current=temperature_2m")
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){ var x = j.current && j.current.temperature_2m; if(isNum(x)){ S.temp = x; update(); } })
+      .catch(function(){ S.temp = null; });
   }
 
   // Petrol is a daily price and loads automatically: national median of prices dated within the last 3 days
@@ -563,127 +1019,164 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     }).catch(function(){ N.petrolErr = true; update(); });
   }
 
-  // Home price per month. Bill month: actual. Current month: average so far. Next 3 months: estimate.
-  // Estimate = typical level of that month in 2023-25, raised by how much higher the last 3 months were than typical (factor f); the excess fades by 30 % per month.
-  // Range: low = back to the typical level, high = the excess does not fade. There is no futures price source, so this is a rule of thumb, not a market forecast.
-  function spotNote(){ $("monthnote").textContent = "No current spot data. The home price is the built-in default (" + fmt(DEFAULT.home) + " SEK/kWh, based on October). Enter your own price."; }
-  var DECAY = 0.7, HIST = ["2023", "2024", "2025"];
-  // Month list for the home price chips (pure, tested). a = SE4 spot data from elpris.json, y = this year, bill = last bill month.
-  function forecast(a, y, bill){
-    var m = a.monthly[String(y)] || [], prev = a.monthly[String(y - 1)] || [], i = m.length - 1;
-    while(i >= 0 && m[i] == null){ i--; }
-    if(i < 0){ return null; }
-    var typ = function(k){
-      var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
-      return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
-    };
-    var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i + 1);
-    var rat = [], k;
-    // the last 3 months; early in the year the missing ones come from the year before (else 1 or 2 days would decide everything)
-    for(k = i - 2; k <= i; k++){ var v = k >= 0 ? m[k] : prev[k + 12], tk = typ((k + 12) % 12); if(v != null && tk > 0){ rat.push(v / tk); } }
-    if(!rat.length){ return null; }
-    var f = Math.min(5, rat.reduce(function(s, x){ return s + x; }, 0) / rat.length);   // capped so one odd month cannot blow up the estimate
-    var list = [];
-    if(bill.year === y && bill.month - 1 < i){ list.push({label:MON[bill.month - 1], spot:bill.spot, kind:"calculated from your bill"}); }
-    var tc = typ(i);
-    if(part && tc > 0){
-      // The bill uses the whole-month average: known days + estimate for the rest of the month.
-      var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
-      list.push({label:MON[i], spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc), hi:home(m[i]), kind:"estimated (" + a.partial.days + " of " + dim + " days known, avg so far " + fmt(m[i]) + ")"});
-    } else {
-      list.push({label:MON[i], spot:m[i], kind:"calculated from spot average"});
+  // Spot prices of the chosen price area: the month chips, and hourly prices for an hourly contract.
+  function applySpot(){
+    var a = N.el && N.el.areas && N.el.areas[S.area];
+    var r = a && forecast(a, new Date().getFullYear(), S.homeAdd);
+    N.months = r ? r.months : [];
+    N.spotOk = !!r;
+    if(r){
+      var cur = N.months.filter(function(x){ return x.idx === r.i; })[0];
+      if(!S.homeEdited && S.contract === "avg"){ S.home = Math.round(cur.price * 100) / 100; save(); }
+      N.fc = r.f;
     }
-    for(k = 1; k <= 3; k++){
-      var mi = (i + k) % 12, t = typ(mi);
-      if(t > 0){ list.push({label:MON[mi], spot:t * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(t), hi:home(t * f), kind:"estimate"}); }
-    }
-    return {months:list.map(function(x){ x.price = home(x.spot); return x; }), f:f, i:i};
+    syncInputs(); update();
   }
-  window.__forecast = forecast; window.__bill = BILL;   // for tests/calc.test.html
-
   function loadSpot(){
-    getJ("elpris.json").then(function(j){
-      var r = forecast(j.areas.SE4, new Date().getFullYear(), BILL);
-      if(!r){ return spotNote(); }
-      N.months = r.months;
-      var cur = N.months.filter(function(x){ return x.label === MON[r.i]; })[0];
-      if(!S.homeEdited){ S.home = Math.round(cur.price * 100) / 100; save(); }
-      $("monthnote").textContent = "Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now " + fmt(r.f, 1) + "x), with that excess fading by 30 % per month. The range runs from \"back to normal\" to \"stays as high as now\". Spot = SE4 monthly average excl. VAT. After the 2027-05-31 discount ends, the home price rises by 0.075.";
-      syncInputs(); update();
-    }).catch(spotNote);
+    getJ("elpris.json").then(function(j){ N.el = j; applySpot(); }).catch(function(){ N.spotOk = false; N.spotErr = true; update(); });
+  }
+
+  // ---- state for the calculation, texts ----
+  function calcState(){
+    var st = Object.assign({}, S);
+    N.hourly = null;
+    if(S.contract === "hourly" && !S.homeEdited && N.el){
+      var c0 = calc(S, null), n = Math.max(1, Math.ceil(c0.home.kwh / c0.home.pw));
+      var hh = cheapestHours(N.el.areas && N.el.areas[S.area], new Date(), n);
+      if(hh){ st.home = Math.round(home(hh.avg, S.homeAdd) * 100) / 100; N.hourly = {n:hh.hours.length, hours:hh.hours}; }
+    }
+    N.homeEff = st.home;
+    return st;
   }
 
   function syncInputs(){
     var set = function(id, v){ var e = $(id); if(document.activeElement !== e){ e.value = v; } };   // never rewrite the field the user is typing in
     set("petrol", fmt(S.petrol));
-    set("home", fmt(S.home));
-    set("kw", fmt(S.kw, 1));
+    set("home", fmt(N.homeEff != null ? N.homeEff : S.home));
+    set("fees", fmt(S.homeAdd));
     set("hours", S.hours);
     set("homehours", S.homeHours);
+    set("tomorrow", fmt(S.tomorrow || 0, 0));
     set("trip", fmt(S.trip || 0, 0));
-    set("hold", fmt(S.hold, 0));
-    $("soc").min = S.hold; set("soc", Math.max(S.soc, S.hold));
+    set("perweek", S.perWeek != null ? S.perWeek : PRESETS[S.car].perWeek);
+    CVKEYS.forEach(function(k){ set("cv" + k, fmt(S.cv[k], 1)); });
+    set("car", S.car);
+    $("soc").min = S.cv.hold; set("soc", Math.max(S.soc, S.cv.hold));
+    $("usetemp").checked = S.useTemp;
     notes();
   }
 
   // Text that follows the state but never touches the input fields (so typing is not interrupted).
   function notes(){
-    var se = SEASONS[S.season], c = selCharger();
+    var c = selCharger(), ty = PRESETS[S.car].type, cons = consumption(S), usable = S.cv.usable;
+    document.documentElement.lang = S.lang; document.title = t("title");
+    [].forEach.call(document.querySelectorAll("[data-i18n]"), function(e){ e.textContent = t(e.getAttribute("data-i18n")); });
+    [].forEach.call($("langs").children, function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-l") === S.lang); });
+    var ls = N.locSt;
+    $("locmsg").textContent = ls ? t(ls.k, ls.p) + (ls.far != null ? t("locFar", {km:fmt(ls.far, 0)}) : "") : t("locHint");
+    $("mapmsg").textContent = t(N.mapSt || "mapIdle");
+    if(!N.pe.length){ $("petrols").textContent = N.locDone ? t("petNone") : t("petList"); }
+    $("petTitle").textContent = t(ty === "bev" ? "petTitleBev" : "petTitle");
+    $("sochint").textContent = t(ty === "bev" ? "socHintBev" : "socHintPhev");
+    $("lblhold").textContent = t(ty === "bev" ? "setHoldBev" : "setHoldPhev");
+    $("lbllS").textContent = t("setLS", {what:t(ty === "bev" ? "petBev" : "petPhev")});
+    $("lbllW").textContent = t("setLW", {what:t(ty === "bev" ? "petBev" : "petPhev")});
+    $("carnote").textContent = t(S.car === "santafe" ? "noteSanta" : "noteGeneric");
+    var sel = $("car"); if(sel.options.length !== 3 || sel.options[0].text !== t("car_phev")){ sel.innerHTML = Object.keys(PRESETS).map(function(k){ return '<option value="' + k + '">' + esc(t("car_" + k)) + '</option>'; }).join(""); sel.value = S.car; }
+    [].forEach.call($("contracts").children, function(b){ b.textContent = t("c_" + b.getAttribute("data-c")); b.setAttribute("aria-pressed", b.getAttribute("data-c") === S.contract); });
+    [].forEach.call($("areas").children, function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-a") === S.area); });
+    [].forEach.call($("homeamps").children, function(b){ var a = +b.getAttribute("data-a"); b.textContent = a ? a + " A (" + fmt(a * MAINS_V / 1000, 2) + " kW)" : t("wallbox"); b.setAttribute("aria-pressed", a === S.homeAmp); });
+    $("sWinter").setAttribute("aria-pressed", S.temp == null && S.season === "winter");
+    $("sSummer").setAttribute("aria-pressed", S.temp == null && S.season === "summer");
     $("hoursv").textContent = fmt(S.hours, 1) + " h";
     $("homehoursv").textContent = fmt(S.homeHours, 0) + " h";
-    [].forEach.call($("homeamps").children, function(b){ b.setAttribute("aria-pressed", +b.getAttribute("data-a") === S.homeAmp); });
+    $("socv").textContent = Math.max(S.soc, S.cv.hold) + " %";
+    var sname = S.temp != null ? t("seasonTemp", {t:fmt(S.temp, 1)}) : t(S.season === "winter" ? "seasonWinter" : "seasonSummer");
+    $("seasonnote").textContent = sname + " " + t("seasonVals", {el:fmt(cons.el, 1), km:fmt(usable * 100 / cons.el, 0), l:fmt(cons.l, 1), petrol:t(ty === "bev" ? "petBev" : "petPhev")});
+    var ch = $("contracthint");
+    if(S.contract === "avg"){ ch.textContent = t("cHintAvg"); }
+    else if(S.contract === "fixed"){ ch.textContent = t("cHintFixed"); }
+    else { ch.textContent = N.hourly ? t("cHintHourly", {n:N.hourly.n, hours:N.hourly.hours.join(", ")}) : t("cHintHourlyNo"); }
+    $("monthnote").textContent = S.contract !== "avg" ? "" : (N.spotOk ? t("monthNote", {f:fmt(N.fc || 1, 1)}) : (N.spotErr ? t("spotNo", {x:fmt(DEFAULT.home)}) : ""));
     $("homepw").textContent = S.homeAmp > 0
-      ? "Charging power used at home: " + fmt(Math.min(S.kw, S.homeAmp * MAINS_V / 1000), 2) + " kW (" + S.homeAmp + " A × " + MAINS_V + " V = " + fmt(S.homeAmp * MAINS_V / 1000, 2) + " kW" + (S.homeAmp * MAINS_V / 1000 > S.kw ? "; the car's limit of " + fmt(S.kw, 1) + " kW applies" : "") + ")."
-      : "Wallbox: the car's limit of " + fmt(S.kw, 1) + " kW is the charging power at home.";
-    $("socv").textContent = Math.max(S.soc, S.hold) + " %";
-    $("sWinter").setAttribute("aria-pressed", S.season === "winter");
-    $("sSummer").setAttribute("aria-pressed", S.season === "summer");
-    $("seasonnote").textContent = seasonNote(se);
-    var p = N.pe[N.pick], t;
-    if(p && Math.abs(p.price - S.petrol) < 0.005){ t = "Petrol price from " + p.name + ", " + fmt(p.dist, 1) + " km away" + (p.date ? ", as of " + p.date : ", date unknown") + ". No forecast: today's pump price only."; }
-    else if(!S.petrolEdited && N.med){ t = (N.med.fresh ? "Daily price, loaded automatically: national median of " + N.med.n + " prices dated in the last 3 days" : "Few dated prices today: median of all " + N.med.n + " Swedish prices, some may be older") + (N.med.date ? " (newest " + N.med.date + ")" : "") + ". Tap \"Use my location\" to use a pump near you."; }
-    else if(!S.petrolEdited && N.petrolErr){ t = "No current petrol data. Using the built-in default of " + fmt(DEFAULT.petrol) + " SEK/l. Tap \"Use my location\" to try again."; }
-    else { t = "Hand-entered or default petrol price. Tap \"Use my location\" to use a pump near you. No forecast: today's price only."; }
-    $("petrolsrc").textContent = t;
+      ? t("homePwAmp", {kw:fmt(Math.min(S.cv.kw, S.homeAmp * MAINS_V / 1000), 2), a:S.homeAmp, v:MAINS_V, raw:fmt(S.homeAmp * MAINS_V / 1000, 2), cap:S.homeAmp * MAINS_V / 1000 > S.cv.kw ? t("homePwCap", {kw:fmt(S.cv.kw, 1)}) : ""})
+      : t("homePwWall", {kw:fmt(S.cv.kw, 1)});
+    var p = N.pe[N.pick], tx;
+    var newest = N.med && N.med.date ? t("newest", {d:N.med.date}) : "";
+    if(p && Math.abs(p.price - S.petrol) < 0.005){ tx = t("petSrcPump", {name:p.name, km:fmt(p.dist, 1), when:p.date ? t("petAsOf", {d:p.date}) : t("petNoDate")}); }
+    else if(!S.petrolEdited && N.med){ tx = t(N.med.fresh ? "petSrcFresh" : "petSrcOld", {n:N.med.n, newest:newest}); }
+    else if(!S.petrolEdited && N.petrolErr){ tx = t("petSrcErr", {x:fmt(DEFAULT.petrol)}); }
+    else { tx = t("petSrcHand"); }
+    $("petrolsrc").textContent = tx;
     var w = [];
-    if(S.petrol < 8 || S.petrol > 30){ w.push("Petrol " + fmt(S.petrol) + " SEK/l looks wrong."); }
-    if(S.home > 15){ w.push("Home price " + fmt(S.home) + " SEK/kWh looks wrong."); }
-    if(new Date() > new Date(HOME_ADD_VALID_TO + "T23:59:59")){ w.push("The home price uses fees from the October 2026 bills and may be outdated (HOME_ADD in the code)."); }
+    if(S.petrol < 8 || S.petrol > 30){ w.push(t("warnPetrol", {x:fmt(S.petrol)})); }
+    if(S.home > 15){ w.push(t("warnHome", {x:fmt(S.home)})); }
+    if(!S.feesEdited && S.contract !== "fixed" && new Date() > new Date(FEES_VALID_TO + "T23:59:59")){ w.push(t("warnFees")); }
     $("pricewarn").textContent = w.join(" ");
-    $("pwnote").textContent = c ? "Charging power used: " + fmt(Math.min(S.kw, c.kw || S.kw), 1) + " kW (the lower of the car's limit and " + c.name + (c.kw ? ", " + c.kw + " kW" : "") + ")." : "Charging power used: " + fmt(S.kw, 1) + " kW (the car's limit is the maximum at stations). It follows the charger you pick on the map.";
+    $("pwnote").textContent = c ? t("pwChosen", {kw:fmt(Math.min(S.cv.kw, c.kw || S.cv.kw), 1), name:c.name, ckw:c.kw ? ", " + c.kw + " kW" : ""}) : t("pwNone", {kw:fmt(S.cv.kw, 1)});
   }
 
   function update(){
-    var c = calc(S, selCharger());
+    var st = calcState(), c = calc(st, selCharger());
+    c.soc = S.soc;
+    var hf = $("home"); if(document.activeElement !== hf){ hf.value = fmt(N.homeEff); }
     renderVerdict(c);
     renderBreak(c);
     renderCompare(c);
     renderTime(c);
-    renderTrip(c);
+    renderDistance(c);
+    renderYear(st);
+    renderLog();
+    if(N.pe.length){ renderPetrols(); }
+    if(N.ch.length){ renderChSelect(); }
     renderChInfo();
     renderMonths();
     styleMarkers();
     notes();
   }
 
-  $("petrol").addEventListener("input", function(e){ S.petrol = Math.max(0, num(e.target.value, S.petrol)); S.petrolEdited = true; N.pick = -1; save(); update(); });
-  $("home").addEventListener("input", function(e){ S.home = Math.max(0, num(e.target.value, S.home)); S.homeEdited = true; save(); update(); });
-  $("kw").addEventListener("input", function(e){ S.kw = Math.max(0.5, num(e.target.value, S.kw)); save(); update(); });
+  // ---- wiring ----
+  function bindNum(id, fn){ $(id).addEventListener("input", function(e){ fn(num(e.target.value, null)); save(); update(); }); }
+  bindNum("petrol", function(v){ if(v != null){ S.petrol = Math.max(0, v); S.petrolEdited = true; N.pick = -1; } });
+  bindNum("home", function(v){ if(v != null){ S.home = Math.max(0, v); S.homeEdited = true; } });
+  bindNum("fees", function(v){ if(v != null){ S.homeAdd = Math.max(0, v); S.feesEdited = true; if(N.el){ applySpot(); } } });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
-  $("trip").addEventListener("input", function(e){ S.trip = Math.max(0, num(e.target.value, 0)); save(); update(); });
   $("homehours").addEventListener("input", function(e){ S.homeHours = num(e.target.value, 10); save(); update(); });
+  $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
+  $("perweek").addEventListener("input", function(e){ S.perWeek = Math.round(num(e.target.value, 5)); save(); update(); });
+  bindNum("tomorrow", function(v){ if(v != null){ S.tomorrow = Math.max(0, v); } });
+  bindNum("trip", function(v){ if(v != null){ S.trip = Math.max(0, v); } });
+  CVKEYS.forEach(function(k){
+    $("cv" + k).addEventListener("input", function(e){ var v = num(e.target.value, null); if(v != null){ S.cv[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], v)); save(); update(); } });
+  });
+  $("car").addEventListener("change", function(e){ S.car = e.target.value; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); });
+  $("cvreset").addEventListener("click", function(){ S.cv = Object.assign({}, PRESETS[S.car].v); save(); syncInputs(); update(); });
+  $("sWinter").addEventListener("click", function(){ S.season = "winter"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
+  $("sSummer").addEventListener("click", function(){ S.season = "summer"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
+  $("usetemp").addEventListener("change", function(e){ S.useTemp = e.target.checked; S.temp = null; save(); if(S.useTemp){ loadTemp(); } update(); });
+  [].forEach.call($("langs").children, function(b){ b.addEventListener("click", function(){ S.lang = b.getAttribute("data-l"); save(); syncInputs(); update(); }); });
+  AREAS.forEach(function(a){ var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-a", a); b.textContent = a; b.addEventListener("click", function(){ S.area = a; save(); applySpot(); }); $("areas").appendChild(b); });
+  CONTRACTS.forEach(function(c){ var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-c", c); b.addEventListener("click", function(){ S.contract = c; if(c === "avg"){ S.homeEdited = false; } save(); applySpot(); }); $("contracts").appendChild(b); });
   AMPS.concat([0]).forEach(function(a){
     var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-a", a);
-    b.textContent = a ? a + " A (" + fmt(a * MAINS_V / 1000, 2) + " kW)" : "Wallbox";
     b.addEventListener("click", function(){ S.homeAmp = a; save(); update(); });
     $("homeamps").appendChild(b);
   });
-  $("hold").addEventListener("input", function(e){ S.hold = Math.min(60, Math.max(0, num(e.target.value, 0))); S.holdEdited = true; $("soc").min = S.hold; save(); update(); });
-  $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
-  $("sWinter").addEventListener("click", function(){ S.season = "winter"; save(); update(); });
-  $("sSummer").addEventListener("click", function(){ S.season = "summer"; save(); update(); });
   $("chsel").addEventListener("change", function(e){ S.sel = e.target.value || null; update(); });
   $("chinfo").addEventListener("click", function(e){ if(e.target.closest("#chclear")){ S.sel = null; update(); } });
+  $("logadd").addEventListener("click", function(){
+    var kwh = num($("logkwh").value, null), km = num($("logkm").value, null);
+    if(!(kwh > 0 && km > 0)){ return; }
+    var d = new Date(), pad = function(x){ return (x < 10 ? "0" : "") + x; };
+    S.log.push({kwh:kwh, km:km, s:S.temp != null ? (S.temp < 10 ? "winter" : "summer") : S.season, d:d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())});
+    S.log = S.log.slice(-50); $("logkwh").value = ""; $("logkm").value = ""; save(); update();
+  });
+  $("loglist").addEventListener("click", function(e){ var b = e.target.closest("[data-del]"); if(b){ S.log.splice(+b.getAttribute("data-del"), 1); save(); update(); } });
+  $("logsum").addEventListener("click", function(e){
+    var b = e.target.closest("[data-use]"); if(!b){ return; }
+    var s = b.getAttribute("data-use"), x = logStats(S.log)[s];
+    if(x && x.per100 != null){ S.cv[s === "winter" ? "elW" : "elS"] = Math.min(80, Math.max(5, Math.round(x.per100 * 10) / 10)); save(); syncInputs(); update(); }
+  });
   $("loc").addEventListener("click", locate);
 
   syncInputs();   // fill the fields before any data arrives (also when a feed fails)
