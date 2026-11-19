@@ -35,6 +35,14 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Safari: close the tab and reopen it the next day: are your settings still there (also after installing to the Home Screen: that is a separate store, set them again)?
 - [ ] Open "Privacy and disclaimer": text readable in your language; "Delete all my saved settings and log" works.
 
+## 3c. Added 2026-11-19 (10 min)
+- [ ] "Use my location": below the price areas a line says which municipality you are in, the price area and the energy tax. Is the municipality right? If you live near a border or the coast, is it still right? In a municipality with two price areas the line asks you to choose.
+- [ ] After that the price area chip and the fee field changed by themselves (only if you had not typed fees). Close and reopen the page: the area stays.
+- [ ] "Your model (optional)": pick a Kia EV6 or EV3 (electric car): battery, AC 10.5 kW and consumption change; the note under the picker names Kia's fact sheet. Do the values look like your experience? Tell me which ones are off.
+- [ ] Electric car, "Adjust and details", time table: the two "Fast DC" columns show an average kW; do the km after 0.5 and 1 h look realistic for your car?
+- [ ] Footer: "Källa: Boio El" and the SCB link are there; "Privacy and disclaimer" mentions the municipality lookup.
+- [ ] Weekly price check: nothing to do. If a GitHub issue "Charging list prices changed" appears, read it and update the price band (PUBLIC in index.html and tools/price_watch.py).
+
 ## 4. Calibrate the assumptions (over 2-3 weeks)
 Write down the real values and change the defaults in `index.html` (or on the page) if they differ.
 
