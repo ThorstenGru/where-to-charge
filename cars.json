@@ -354,6 +354,205 @@
     "lS": 8.0,
     "lW": 9.5
    }
+  },
+  {
+   "id": "volvo_ex30_p5",
+   "type": "bev",
+   "name": "Volvo EX30 Single Motor (49 kWh)",
+   "dc": 130,
+   "conf": "A",
+   "src": "Volvo MY27 price list (Finland, FI/SV, 2026-05-05): usable capacity, 11 kW AC, DC and WLTP range and consumption",
+   "raw": {
+    "usable_kwh": 49,
+    "nominal_kwh": 51,
+    "ac_kw": 11,
+    "dc_kw": 130,
+    "wltp_km": 337,
+    "wltp_kwh_100": 17.1
+   },
+   "v": {
+    "usable": 53.9,
+    "kw": 11,
+    "hold": 10,
+    "elS": 19.4,
+    "elW": 25.0,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "volvo_ex30_lr",
+   "type": "bev",
+   "name": "Volvo EX30 Extended Range (65 kWh)",
+   "dc": 150,
+   "conf": "A",
+   "src": "Volvo MY27 price list (Finland, FI/SV, 2026-05-05): usable capacity, 11 kW AC, DC and WLTP range and consumption",
+   "raw": {
+    "usable_kwh": 65,
+    "nominal_kwh": 69,
+    "ac_kw": 11,
+    "dc_kw": 150,
+    "wltp_km": "471-476",
+    "wltp_kwh_100": "17.0-17.2"
+   },
+   "v": {
+    "usable": 71.5,
+    "kw": 11,
+    "hold": 10,
+    "elS": 19.4,
+    "elW": 25.0,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "volvo_ex30_p8",
+   "type": "bev",
+   "name": "Volvo EX30 Twin Motor Performance (65 kWh)",
+   "dc": 150,
+   "conf": "A",
+   "src": "Volvo MY27 price list (Finland, FI/SV, 2026-05-05): usable capacity, 11 kW AC, DC and WLTP range and consumption",
+   "raw": {
+    "usable_kwh": 65,
+    "nominal_kwh": 69,
+    "ac_kw": 11,
+    "dc_kw": 150,
+    "wltp_km": "448-450",
+    "wltp_kwh_100": "17.5-17.7"
+   },
+   "v": {
+    "usable": 71.5,
+    "kw": 11,
+    "hold": 10,
+    "elS": 20.0,
+    "elW": 25.8,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "polestar_4_rear",
+   "type": "bev",
+   "name": "Polestar 4 Rear motor (100 kWh)",
+   "dc": 200,
+   "conf": "A",
+   "src": "Polestar Sweden specification page (100 kWh capacity, AC 11 kW, DC 200 kW, WLTP target); net kWh assumed 0.95 x capacity",
+   "raw": {
+    "capacity_kwh": 100,
+    "net_kwh_assumed": 95,
+    "ac_kw": 11,
+    "dc_kw": 200,
+    "wltp_km": 620,
+    "wltp_kwh_100": "17.8-18.4",
+    "url": "https://www.polestar.com/se/polestar-4/specifications/"
+   },
+   "v": {
+    "usable": 104.5,
+    "kw": 11,
+    "hold": 10,
+    "elS": 20.6,
+    "elW": 26.6,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "polestar_4_dual",
+   "type": "bev",
+   "name": "Polestar 4 Dual motor (100 kWh)",
+   "dc": 200,
+   "conf": "A",
+   "src": "Polestar Sweden specification page (100 kWh capacity, AC 11 kW, DC 200 kW, WLTP target); net kWh assumed 0.95 x capacity",
+   "raw": {
+    "capacity_kwh": 100,
+    "net_kwh_assumed": 95,
+    "ac_kw": 11,
+    "dc_kw": 200,
+    "wltp_km": 590,
+    "wltp_kwh_100": "19.0-21.7",
+    "url": "https://www.polestar.com/se/polestar-4/specifications/"
+   },
+   "v": {
+    "usable": 104.5,
+    "kw": 11,
+    "hold": 10,
+    "elS": 23.2,
+    "elW": 29.9,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "vw_passat_ehybrid",
+   "type": "phev",
+   "name": "VW Passat eHybrid 204 hp (19.7 kWh)",
+   "dc": null,
+   "conf": "A",
+   "src": "Volkswagen Sweden press release (net battery, AC power, range, consumption); petrol values are the generic profile",
+   "raw": {
+    "net_kwh": 19.7,
+    "ac_kw": 11,
+    "wltp_ev_range_km": 131,
+    "wltp_kwh_100": 16.2,
+    "url": "https://via.tt.se/files/1995691/3433217/57686/sv"
+   },
+   "v": {
+    "usable": 21.7,
+    "kw": 11,
+    "hold": 10,
+    "elS": 18.4,
+    "elW": 23.7,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "volvo_xc60_t6",
+   "type": "phev",
+   "name": "Volvo XC60 T6 Long range (41 kWh)",
+   "dc": null,
+   "conf": "A",
+   "src": "Volvo Sweden specifications (nominal 41 kWh, 17.1 kWh/100 km, up to 199 km, 4 h on 3-phase 16 A); net kWh assumed 0.95 x nominal, AC about 11 kW derived from the charging time",
+   "raw": {
+    "nominal_kwh": 41,
+    "net_kwh_assumed": 38.9,
+    "ac_kw_derived": 11,
+    "wltp_ev_range_km": 199,
+    "wltp_kwh_100": 17.1,
+    "url": "https://www.volvocars.com/se/cars/xc60-hybrid/specifications/"
+   },
+   "v": {
+    "usable": 42.8,
+    "kw": 11,
+    "hold": 10,
+    "elS": 19.4,
+    "elW": 25.0,
+    "lS": 8.0,
+    "lW": 9.0
+   }
+  },
+  {
+   "id": "skoda_kodiaq_ehybrid",
+   "type": "phev",
+   "name": "Skoda Kodiaq iV 204 hp (19.7 kWh)",
+   "dc": null,
+   "conf": "A",
+   "src": "Skoda press kit and press release (net 19.7 kWh, AC up to 11 kW, range over 100 km); consumption derived from the range as an upper estimate; petrol values are the generic profile",
+   "raw": {
+    "gross_kwh": 25.7,
+    "net_kwh": 19.7,
+    "ac_kw": 11,
+    "wltp_ev_range_km": ">100"
+   },
+   "v": {
+    "usable": 21.7,
+    "kw": 11,
+    "hold": 10,
+    "elS": 22.4,
+    "elW": 28.9,
+    "lS": 8.0,
+    "lW": 9.0
+   }
   }
  ]
 }

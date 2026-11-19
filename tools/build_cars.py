@@ -79,6 +79,31 @@ for key, gross, dc, wltp_km, wltp_kwh in (("std", 58.3, 101, 436, 14.9), ("lr", 
                  "raw": {"gross_kwh": gross, "net_kwh_assumed": net, "ac_kw": 10.5, "dc_kw": dc, "wltp_km": wltp_km, "wltp_kwh_100": wltp_kwh, "url": EV3_URL},
                  "v": {"usable": round(net * 1.1, 1), "kw": 10.5, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": lS, "lW": lW}})
 
+# Manufacturer sources, added 2026-11-19 (WLTP consumption of these documents is the socket figure: only REAL / 1.1 applies).
+# Volvo EX30: Volvo's MY27 price list (Finnish market, bilingual FI/SV, 2026-05-05): usable capacity 49 / 65 kWh, on-board charger 11 kW, DC 130 / 150 kW,
+#   WLTP range 337 km (Single Motor), 471-476 (Extended Range), 448-450 (Twin Motor Performance), 17.1 / 17.0-17.2 / 17.5-17.7 kWh/100 km.
+# Polestar 4: polestar.com/se/polestar-4/specifications (100 kWh capacity, net/gross not stated -> 0.95 x assumed), AC 11 kW, DC up to 200 kW,
+#   WLTP target 620 km / 17.8-18.4 (Rear motor), 590 km / 19.0-21.7 (Dual motor).
+# VW Passat eHybrid 204 hp: VW Sweden press release 2024-03-28 (via.tt.se): 19.7 kWh net, 11 kW AC, up to 131 km, 16.2 kWh/100 km.
+# Volvo XC60 T6 Long range (new generation, 2026): volvocars.com/se specifications: nominal 41 kWh (net not stated -> 0.95 x assumed), 17.1 kWh/100 km, up to 199 km,
+#   0-100 % in 4 h on 3-phase 16 A (so about 11 kW: AC power itself is not stated).
+# Skoda Kodiaq iV (204 hp): Skoda press kit / press release: 25.7 kWh gross, 19.7 kWh net, AC up to 11 kW, range "over 100 km" (no exact figure: consumption is an upper estimate).
+def add(car_id, typ, name, net, ac, dc, kwh100, conf, src, raw, lS, lW, net_assumed=False):
+    elS = round(kwh100 * REAL / 1.1, 1)
+    cars.append({"id": car_id, "type": typ, "name": name, "dc": dc, "conf": conf, "src": src, "raw": raw,
+                 "v": {"usable": round(net * 1.1, 1), "kw": ac, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": lS, "lW": lW}})
+
+VOLVO30 = "Volvo MY27 price list (Finland, FI/SV, 2026-05-05): usable capacity, 11 kW AC, DC and WLTP range and consumption"
+add("volvo_ex30_p5", "bev", "Volvo EX30 Single Motor (49 kWh)", 49.0, 11, 130, 17.1, "A", VOLVO30, {"usable_kwh": 49, "nominal_kwh": 51, "ac_kw": 11, "dc_kw": 130, "wltp_km": 337, "wltp_kwh_100": 17.1}, 6.5, 7.5)
+add("volvo_ex30_lr", "bev", "Volvo EX30 Extended Range (65 kWh)", 65.0, 11, 150, 17.1, "A", VOLVO30, {"usable_kwh": 65, "nominal_kwh": 69, "ac_kw": 11, "dc_kw": 150, "wltp_km": "471-476", "wltp_kwh_100": "17.0-17.2"}, 6.5, 7.5)
+add("volvo_ex30_p8", "bev", "Volvo EX30 Twin Motor Performance (65 kWh)", 65.0, 11, 150, 17.6, "A", VOLVO30, {"usable_kwh": 65, "nominal_kwh": 69, "ac_kw": 11, "dc_kw": 150, "wltp_km": "448-450", "wltp_kwh_100": "17.5-17.7"}, 6.5, 7.5)
+POL = "Polestar Sweden specification page (100 kWh capacity, AC 11 kW, DC 200 kW, WLTP target); net kWh assumed 0.95 x capacity"
+add("polestar_4_rear", "bev", "Polestar 4 Rear motor (100 kWh)", 95.0, 11, 200, 18.1, "A", POL, {"capacity_kwh": 100, "net_kwh_assumed": 95, "ac_kw": 11, "dc_kw": 200, "wltp_km": 620, "wltp_kwh_100": "17.8-18.4", "url": "https://www.polestar.com/se/polestar-4/specifications/"}, 8.0, 9.5)
+add("polestar_4_dual", "bev", "Polestar 4 Dual motor (100 kWh)", 95.0, 11, 200, 20.4, "A", POL, {"capacity_kwh": 100, "net_kwh_assumed": 95, "ac_kw": 11, "dc_kw": 200, "wltp_km": 590, "wltp_kwh_100": "19.0-21.7", "url": "https://www.polestar.com/se/polestar-4/specifications/"}, 8.0, 9.5)
+add("vw_passat_ehybrid", "phev", "VW Passat eHybrid 204 hp (19.7 kWh)", 19.7, 11, None, 16.2, "A", "Volkswagen Sweden press release (net battery, AC power, range, consumption); petrol values are the generic profile", {"net_kwh": 19.7, "ac_kw": 11, "wltp_ev_range_km": 131, "wltp_kwh_100": 16.2, "url": "https://via.tt.se/files/1995691/3433217/57686/sv"}, 6.5, 7.5)
+add("volvo_xc60_t6", "phev", "Volvo XC60 T6 Long range (41 kWh)", round(41 * 0.95, 1), 11, None, 17.1, "A", "Volvo Sweden specifications (nominal 41 kWh, 17.1 kWh/100 km, up to 199 km, 4 h on 3-phase 16 A); net kWh assumed 0.95 x nominal, AC about 11 kW derived from the charging time", {"nominal_kwh": 41, "net_kwh_assumed": 38.9, "ac_kw_derived": 11, "wltp_ev_range_km": 199, "wltp_kwh_100": 17.1, "url": "https://www.volvocars.com/se/cars/xc60-hybrid/specifications/"}, 8.0, 9.0)
+add("skoda_kodiaq_ehybrid", "phev", "Skoda Kodiaq iV 204 hp (19.7 kWh)", 19.7, 11, None, round(19.7 / 100 * 100, 1), "A", "Skoda press kit and press release (net 19.7 kWh, AC up to 11 kW, range over 100 km); consumption derived from the range as an upper estimate; petrol values are the generic profile", {"gross_kwh": 25.7, "net_kwh": 19.7, "ac_kw": 11, "wltp_ev_range_km": ">100"}, 8.0, 9.0)
+
 doc = {"v": 1, "updated": "2026-11-19", "note": "Estimates, not measurements. Values are derived as described in docs/CARS.md; correct them with the consumption log.", "cars": cars}
 open(OUT, "w", encoding="utf-8").write(json.dumps(doc, ensure_ascii=False, indent=1))
 print(len(cars), "models written to", OUT)
