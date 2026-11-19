@@ -4,7 +4,9 @@ Inputs (download them first, they are not stored in the repo):
   1. SCB municipality borders, CC0: https://www.scb.se/hitta-statistik/regional-statistik-och-kartor/regionala-indelningar/digitala-granser/
      (shape_svenska_*.zip, inside it Kommun_Sweref99TM.zip; unzip so that Kommun_Sweref99TM.shp is readable)
   2. Boio El municipality table, CC BY 4.0 (credit "Kalla: Boio El, https://boio.se/el"): https://boio.se/el/api/v1/kommuner (save as boio.json)
-Usage: python tools/build_kommun.py path/to/Kommun_Sweref99TM.shp path/to/boio.json   (needs: pip install pyshp). Writes data/kommun.json.
+  3. Optional, for the grid fee: Ei's table of grid fees for households (Excel, open data), https://www.ei.se/om-oss/statistik-och-oppna-data/natavgifter---elnat
+     (Hushallskunder-elnatsforetagens-elnatsavgifter.xlsx). Column "Villa 20A, 20 000 kWh/ar", code NT4030 "Rorlig 1, ore/kWh exkl. moms", year 2026.
+Usage: python tools/build_kommun.py path/to/Kommun_Sweref99TM.shp path/to/boio.json [path/to/ei.xlsx]   (needs: pip install pyshp openpyxl). Writes data/kommun.json.
 """
 import json
 import math
@@ -13,6 +15,7 @@ import sys
 import shapefile
 
 SHP, BOIO = sys.argv[1], sys.argv[2]
+EI = sys.argv[3] if len(sys.argv) > 3 else None
 OUT = "data/kommun.json"
 TOL_M = 120.0      # Douglas-Peucker tolerance in metres: keeps the file small, the border error is below the tolerance
 DEC = 3            # coordinates rounded to 0.001 degree (about 110 m north-south)
@@ -64,6 +67,31 @@ def dp(pts, tol):
 
 
 boio = {k["code"]: k for k in json.load(open(BOIO, encoding="utf-8"))["kommuner"]}
+
+# Variable grid fee (oere/kWh excl. VAT) per grid operator, Ei 2026, Villa 20 A, 20 000 kWh a year (electric heating: the typical home with a car charger)
+fee = {}
+if EI:
+    import openpyxl
+    rows = list(openpyxl.load_workbook(EI, data_only=True, read_only=True).worksheets[0].iter_rows(values_only=True))
+    col, grp = None, None
+    for i in range(len(rows[0])):
+        grp = rows[0][i] or grp
+        if rows[1][i] == "NT4030" and rows[3][i] == 2026 and str(grp).startswith("Villa 20A, 20"):
+            col = i
+    assert col is not None, "column NT4030 / 2026 not found"
+    for r in rows[4:]:
+        if r[0] and str(r[0]).startswith("REL") and r[col] not in (None, ""):
+            fee[r[0]] = float(r[col])
+
+
+def grid_of(b):
+    """Main grid operator of the municipality (largest population share) and its variable fee; None when that operator has no value (then the default stays)."""
+    nets = sorted(b["grid"]["networks"], key=lambda n: -n["populationSharePct"])
+    if not nets or nets[0]["rel"] not in fee:
+        return None, None
+    v = fee[nets[0]["rel"]]
+    return (round(v, 1), nets[0]["company"]) if v >= 1.0 else (None, None)   # under 1 oere/kWh = a power tariff (the cost is in the fixed/power fees): unknown, not free
+
 r = shapefile.Reader(SHP, encoding="latin-1")
 out = []
 for sr in r.shapeRecords():
@@ -85,13 +113,15 @@ for sr in r.shapeRecords():
             flat += [round(la, DEC), round(lo, DEC)]
         if len(flat) >= 8:       # at least 4 points
             rings.append(flat)
-    out.append({"c": code, "n": b["name"], "a": b["areas"], "t": 1 if b["energyTax"].get("reduced") else 0, "p": rings})
+    g, gc = grid_of(b)
+    out.append({"c": code, "n": b["name"], "a": b["areas"], "t": 1 if b["energyTax"].get("reduced") else 0, "g": g, "gc": gc, "p": rings})
 
 doc = {"v": 1, "updated": json.load(open(BOIO, encoding="utf-8"))["period"], "n": len(out),
        "attribution": ["Borders: SCB (CC0)", "Price areas and energy tax zone: Boio El, https://boio.se/el (CC BY 4.0)"],
-       "note": "Rings are [lat, lon, lat, lon, ...], simplified (about 120 m). 't' = 1: reduced energy tax (46 northern municipalities). 'a' lists the price area(s): 17 municipalities have two.",
+       "note": "Rings are [lat, lon, lat, lon, ...], simplified (about 120 m). 't' = 1: reduced energy tax (46 northern municipalities). 'a' lists the price area(s): 17 municipalities have two. 'g' = variable grid fee of the main grid operator in oere/kWh excl. VAT (Ei 2026, Villa 20 A / 20 000 kWh), 'gc' its name; null = unknown.",
+       "attribution_grid": "Grid fees: Energimarknadsinspektionen (Ei), open data; operator per municipality: Boio El (CC BY 4.0)",
        "k": out}
 import os
 os.makedirs("data", exist_ok=True)
 open(OUT, "w", encoding="utf-8").write(json.dumps(doc, ensure_ascii=False, separators=(",", ":")))
-print(len(out), "municipalities,", os.path.getsize(OUT), "bytes")
+print(len(out), "municipalities,", os.path.getsize(OUT), "bytes,", sum(1 for k in out if k["g"] is not None), "with a grid fee")

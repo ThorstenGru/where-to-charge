@@ -290,6 +290,8 @@ document.querySelector("iframe").onload = function () {
       yes("Kiruna is SE1 with reduced tax", /:SE1:1$/.test(name(67.86, 20.23)));
       yes("Gavle lies in two price areas", /SE2\/SE3/.test(name(60.67, 17.14)));
       yes("a point in the sea matches nothing", name(56.5, 17.0) === "none");
+      yes("grid fee: 200+ municipalities have a value, none below 1 oere (power tariffs are unknown, not free)", kd.k.filter(function (k) { return k.g !== null; }).length >= 200 && kd.k.every(function (k) { return k.g === null || (k.g >= 1 && k.g <= 100 && k.gc); }));
+      yes("grid fee: Lund has a value", at(kd, 55.70, 13.19).g > 1);
       yes("46 municipalities have the reduced tax", kd.k.filter(function (k) { return k.t === 1; }).length === 46);
       finish();
     });

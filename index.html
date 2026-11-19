@@ -341,7 +341,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var PUBLIC = {date:"2026-11-18", ac:[5.0, 6.6], dc:[5.7, 7.5], staleDays:60};
   var KNAPP = 0.45;   // SEK per kWh around MIN_GAIN where the answer is too close to call (price and consumption uncertainty, docs/RESEARCH 3)
   var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
-  var VAT = 1.25, FEES_DEFAULT = 0.73337, TAX_REDUCTION = 0.096;   // 46 northern municipalities pay 9.6 oere/kWh less energy tax (excl. VAT, 2026)
+  var VAT = 1.25, FEES_DEFAULT = 0.73337, TAX_REDUCTION = 0.096, SUPPLIER_DEFAULT = 0.11497, GRID_DEFAULT = 0.2584;   // 46 northern municipalities pay 9.6 oere/kWh less energy tax (excl. VAT, 2026)
      // fees default: one household's October 2026 bills (variable 0.11497 + grid 0.2584 + energy tax 0.36)
   // Petrol tax steps, SEK/l incl. VAT (Regeringen PM 2026: +3.00 on 2026-12-01; +0.125 on 2027-01-01). A price stamped before a step
   // is raised by it once the step date has passed, because pumps pass the change on within days. Hand-kept, see docs/RESEARCH_2026-11-18.md 2.3.
@@ -613,6 +613,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     colDc:["Fast DC {x} kW","Schnelllader DC {x} kW","Snabbladdare DC {x} kW"],
     kommOne:["From your location: {n}, price area {a}, {tax}. Price area and fees were set for you; you can change them below.","Nach deinem Standort: {n}, Preisgebiet {a}, {tax}. Preisgebiet und Aufschläge wurden für dich eingestellt; du kannst sie unten ändern.","Utifrån din plats: {n}, elområde {a}, {tax}. Elområde och påslag har ställts in åt dig; du kan ändra dem nedan."],
     kommTwo:["From your location: {n} lies in two price areas ({a}), {tax}. Choose the one on your electricity bill.","Nach deinem Standort: {n} liegt in zwei Preisgebieten ({a}), {tax}. Wähle das Gebiet von deiner Stromrechnung.","Utifrån din plats: {n} ligger i två elområden ({a}), {tax}. Välj det som står på din elräkning."],
+    kommGrid:["Grid fee: {g} öre/kWh excl. VAT ({c}, Ei 2026, villa 20 A). Your own bill may differ.","Netzgebühr: {g} öre/kWh ohne MwSt. ({c}, Ei 2026, Villa 20 A). Deine Rechnung kann abweichen.","Nätavgift: {g} öre/kWh exkl. moms ({c}, Ei 2026, villa 20 A). Din faktura kan skilja sig."],
+    kommGridNo:["No per-kWh grid fee known for your grid operator (often a power tariff): the default value is used. Enter the fees from your bill.","Für deinen Netzbetreiber ist keine Netzgebühr pro kWh bekannt (oft ein Leistungstarif): Es gilt der Standardwert. Gib die Aufschläge deiner Rechnung ein.","Ingen nätavgift per kWh känd för din nätägare (ofta effekttariff): standardvärdet används. Ange påslagen från din faktura."],
     taxNorm:["normal energy tax","normale Energiesteuer","normal energiskatt"],
     taxLow:["reduced energy tax (northern Sweden)","ermäßigte Energiesteuer (Nordschweden)","sänkt energiskatt (norra Sverige)"],
     closeBig:["Close call","Knapp","Jämnt"],
@@ -651,7 +653,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     hours:1, homeHours:10, homeAmp:0, area:"SE4", contract:"avg",
     home:4.59, homeEdited:false, homeAdd:FEES_DEFAULT, feesEdited:false, petrol:15.80, petrolEdited:false,
     petrolAt:null, homeAt:null, feesAt:null, seasonAt:null,
-    tomorrow:0, trip:0, perWeek:null, noHome:false, model:null, dcPeak:null, komm:null, taxRed:false, log:[]
+    tomorrow:0, trip:0, perWeek:null, noHome:false, model:null, dcPeak:null, komm:null, taxRed:false, grid:null, log:[]
   };
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", homeAdd:"feesEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
@@ -667,6 +669,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }catch(e){}
   var LANG_SAVED = LANGS.indexOf(S.lang) >= 0 ? S.lang : DEFAULT.lang;   // what the user chose; ?lang= below never replaces it
   function isNum(x){ return typeof x === "number" && isFinite(x); }
+  // Default fees excl. VAT (SEK/kWh): supplier mark-up + grid fee (municipality's main operator when known, else the default) + energy tax (reduced in 46 northern municipalities).
+  function feeDefault(){ return SUPPLIER_DEFAULT + (isNum(S.grid) ? S.grid / 100 : GRID_DEFAULT) + (S.taxRed ? 0.36 - TAX_REDUCTION : 0.36); }
   if(LANGS.indexOf(S.lang) < 0){ S.lang = DEFAULT.lang; }
   if(Q && LANGS.indexOf(Q) >= 0){ S.lang = Q; }   // ?lang=de for links and tests: shown, never stored
   if(!PRESETS[S.car]){ S.car = DEFAULT.car; S.cv = null; }
@@ -688,6 +692,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   if(typeof S.model !== "string" || S.model.length > 40){ S.model = null; }
   if(!isNum(S.dcPeak) || S.dcPeak < 20 || S.dcPeak > 500){ S.dcPeak = null; }
   if(typeof S.komm !== "string" || !/^\d{4}$/.test(S.komm)){ S.komm = null; } S.taxRed = S.komm != null && S.taxRed === true;
+  if(!isNum(S.grid) || S.grid < 1 || S.grid > 100 || S.komm == null){ S.grid = null; }
   S.soc = Math.min(100, Math.max(0, S.soc));
   // A hand-typed price expires after 7 days and falls back to the live data (the page says so). Older saves without a date get 7 days from now.
   var EXPIRED = [], TODAY = new Date().toISOString().slice(0, 10);
@@ -699,7 +704,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     } else { S[p[1]] = null; }
   });
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
-  if(!S.feesEdited && S.taxRed){ S.homeAdd = FEES_DEFAULT - TAX_REDUCTION; }
+  if(!S.feesEdited){ S.homeAdd = feeDefault(); }
   S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Use my location"
   S.temp = null;  // outside temperature, only while it is loaded
   S.hours = Math.min(12, Math.max(0.5, S.hours));
@@ -762,11 +767,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }
   window.__kommun = kommunAt;
   function applyKommun(k){
-    N.kommun = k ? {n:k.n, a:k.a, t:k.t} : null;
+    N.kommun = k ? {n:k.n, a:k.a, t:k.t, g:k.g, gc:k.gc} : null;
     if(!k){ notes(); return; }
-    S.komm = k.c; S.taxRed = k.t === 1;
+    S.komm = k.c; S.taxRed = k.t === 1; S.grid = isNum(k.g) && k.g >= 1 ? k.g : null;
     if(k.a.indexOf(S.area) < 0){ S.area = k.a[0]; }       // one area: set it; two areas: keep the choice if it is one of them
-    if(!S.feesEdited){ S.homeAdd = FEES_DEFAULT - (S.taxRed ? TAX_REDUCTION : 0); }
+    if(!S.feesEdited){ S.homeAdd = feeDefault(); }
     save(); applySpot();
   }
   function loadKommun(la, lo){
@@ -1372,7 +1377,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     [].forEach.call($("homeamps").children, function(b){ var a = +b.getAttribute("data-a"); b.textContent = a ? a + " A (" + fmt(a * MAINS_V / 1000, 2) + " kW)" : t("wallbox"); b.setAttribute("aria-pressed", a === S.homeAmp); });
     $("nohomewrap").hidden = ty !== "bev"; $("nohome").checked = S.noHome;
     [].forEach.call($("kind").children, function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-k") === ty); });
-    $("kommnote").textContent = N.kommun ? t(N.kommun.a.length > 1 ? "kommTwo" : "kommOne", {n:N.kommun.n, a:N.kommun.a.join(" / "), tax:t(N.kommun.t ? "taxLow" : "taxNorm")}) : "";
+    $("kommnote").textContent = N.kommun ? t(N.kommun.a.length > 1 ? "kommTwo" : "kommOne", {n:N.kommun.n, a:N.kommun.a.join(" / "), tax:t(N.kommun.t ? "taxLow" : "taxNorm")}) + " " + (N.kommun.g >= 1 ? t("kommGrid", {g:fmt(N.kommun.g, 1), c:N.kommun.gc}) : t("kommGridNo")) : "";
     $("basisline").textContent = t("basisLine", {area:S.area, home:fmt(N.homeEff != null ? N.homeEff : S.home), petrol:fmt(S.petrol), season:S.temp != null ? fmt(S.temp, 1) + " °C" : t(S.season === "winter" ? "winter" : "summer")});
     $("sWinter").setAttribute("aria-pressed", S.temp == null && S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.temp == null && S.season === "summer");
