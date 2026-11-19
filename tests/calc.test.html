@@ -172,6 +172,16 @@ document.querySelector("iframe").onload = function () {
   eq("year: 5 x 26 x 2 full charges of 10.4 kWh", yr.kwh, 2704, 1);
   eq("year: saving in SEK", yr.sek, 3388, 5);
 
+  // --- profiles and an electric car without home charging ---
+  yes("seven presets: 3 PHEV sizes, Santa Fe, 3 BEV sizes", Object.keys(P).length === 7 && ["phev_s", "phev", "phev_l", "santafe", "bev_s", "bev", "bev_l"].every(function (k) { return P[k]; }));
+  yes("sizes grow: usable kWh small < medium < large", P.bev_s.v.usable < P.bev.v.usable && P.bev.v.usable < P.bev_l.v.usable && P.phev_s.v.usable < P.phev.v.usable && P.phev.v.usable < P.phev_l.v.usable);
+  yes("every BEV profile keeps a 10 % reserve", ["bev_s", "bev", "bev_l"].every(function (k) { return P[k].v.hold === 10 && P[k].type === "bev"; }));
+  var noHome = adv(calc(mk({petrol: 15, home: 2, soc: 30, noHome: true}, "bev_s"), null), 1);
+  yes("BEV without home charging: charge on the road, with the dated band", noHome.big === "Charge on the road" && /5\.0.6\.6/.test(noHome.l1) && /2026-11-18/.test(noHome.l1));
+  yes("... and per 100 km against a petrol car", /per 100 km|Per 100 km/.test(noHome.l2) && /petrol car/.test(noHome.l2));
+  yes("BEV with home charging is unchanged", adv(calc(mk({petrol: 15, home: 2, soc: 30, noHome: false}, "bev"), null), 1).big === "Charge at home");
+  yes("a plug-in hybrid ignores the no-home flag", adv(calc(mk({home: 4.0, noHome: true}), null), 1).big === "Charge at home");
+
   // --- petrol: crowd only, brand median, plausibility band, tax step ---
   var pm = W.__petrol, T0 = Date.parse("2026-11-18T12:00:00Z"), stamp = "2026-11-17T15:00:00+00:00";
   function stn(brand, price, src, at) { return {brand: brand, prices: [{octane: 95, price: price, source: src || "bensinpriser", updated_at: at === undefined ? stamp : at}]}; }
