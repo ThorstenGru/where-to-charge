@@ -280,6 +280,17 @@ document.querySelector("iframe").onload = function () {
       yes("cars.json: every value inside the app's limits", j.cars.every(function (c) { return Object.keys(LIMS).every(function (k) { return c.v[k] >= LIMS[k][0] && c.v[k] <= LIMS[k][1]; }); }));
       yes("cars.json: source and confidence on every model", j.cars.every(function (c) { return c.src && /^[AB]$/.test(c.conf) && (c.type === "bev" || c.type === "phev"); }));
       yes("cars.json: winter consumption above summer, a BEV gets a DC peak", j.cars.every(function (c) { return c.v.elW > c.v.elS && (c.type !== "bev" || c.dc >= 50); }));
+      return fetch("../data/kommun.json").then(function (r) { return r.json(); });
+    }).then(function (kd) {
+      var at = W.__kommun;
+      function name(la, lo) { var k = at(kd, la, lo); return k ? k.n + ":" + k.a.join("/") + ":" + k.t : "none"; }
+      yes("kommun.json: 290 municipalities", kd.v === 1 && kd.k.length === 290);
+      yes("Lund is SE4, normal tax", /^Lund:SE4:0$/.test(name(55.70, 13.19)));
+      yes("Stockholm is SE3", /^Stockholm:SE3:0$/.test(name(59.33, 18.07)));
+      yes("Kiruna is SE1 with reduced tax", /:SE1:1$/.test(name(67.86, 20.23)));
+      yes("Gavle lies in two price areas", /SE2\/SE3/.test(name(60.67, 17.14)));
+      yes("a point in the sea matches nothing", name(56.5, 17.0) === "none");
+      yes("46 municipalities have the reduced tax", kd.k.filter(function (k) { return k.t === 1; }).length === 46);
       finish();
     });
   });

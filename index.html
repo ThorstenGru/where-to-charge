@@ -141,6 +141,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <div id="areas" class="chips" style="margin-top:0"></div>
     <p class="hint" data-i18n="areaHint"></p>
     <label class="check" id="nohomewrap" hidden><input type="checkbox" id="nohome"><span data-i18n="noHome"></span></label>
+    <p id="kommnote" class="hint"></p>
     <p id="basisline" class="small" style="margin:10px 0 0;color:var(--ink)"></p>
     <div class="gap"></div>
     <button id="loc" class="chip primary" data-i18n="locBtn">Use my location</button>
@@ -322,6 +323,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <a href="https://nobil.no/" rel="noopener">NOBIL by Enova</a> (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>) ·
     <a href="https://www.openstreetmap.org/copyright" rel="noopener">© OpenStreetMap contributors</a> (ODbL) ·
     <a href="https://leafletjs.com/" rel="noopener">Leaflet</a> ·
+    <a href="https://boio.se/el" rel="noopener">Källa: Boio El</a> (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>; price areas and energy tax zone by municipality) ·
+    <a href="https://www.scb.se/hitta-statistik/regional-statistik-och-kartor/regionala-indelningar/digitala-granser/" rel="noopener">SCB municipality borders</a> (CC0) ·
     <a href="https://open-meteo.com/" rel="noopener">Weather data by Open-Meteo.com</a></p>
 </main>
 
@@ -338,7 +341,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var PUBLIC = {date:"2026-11-18", ac:[5.0, 6.6], dc:[5.7, 7.5], staleDays:60};
   var KNAPP = 0.45;   // SEK per kWh around MIN_GAIN where the answer is too close to call (price and consumption uncertainty, docs/RESEARCH 3)
   var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
-  var VAT = 1.25, FEES_DEFAULT = 0.73337;   // fees default: one household's October 2026 bills (variable 0.11497 + grid 0.2584 + energy tax 0.36)
+  var VAT = 1.25, FEES_DEFAULT = 0.73337, TAX_REDUCTION = 0.096;   // 46 northern municipalities pay 9.6 oere/kWh less energy tax (excl. VAT, 2026)
+     // fees default: one household's October 2026 bills (variable 0.11497 + grid 0.2584 + energy tax 0.36)
   // Petrol tax steps, SEK/l incl. VAT (Regeringen PM 2026: +3.00 on 2026-12-01; +0.125 on 2027-01-01). A price stamped before a step
   // is raised by it once the step date has passed, because pumps pass the change on within days. Hand-kept, see docs/RESEARCH_2026-11-18.md 2.3.
   var TAXSTEPS = [{from:"2026-12-01", add:3.00}, {from:"2027-01-01", add:0.125}];
@@ -607,13 +611,17 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     modelHint:["Pick your model to use its battery and charging data. Everything stays editable below.","Wähle dein Modell, um seine Batterie- und Ladedaten zu nutzen. Alles bleibt unten änderbar.","Välj din modell för att använda dess batteri- och laddningsdata. Allt kan fortfarande ändras nedan."],
     modelSrc:["Values: {src} (confidence {conf}); battery {usable} kWh from the socket, AC {kw} kW. Consumption is an estimate from the WLTP range: measure yours with the log.","Werte: {src} (Verlässlichkeit {conf}); Batterie {usable} kWh ab Steckdose, AC {kw} kW. Der Verbrauch ist eine Schätzung aus der WLTP-Reichweite: Miss deinen mit dem Protokoll.","Värden: {src} (tillförlitlighet {conf}); batteri {usable} kWh från uttaget, AC {kw} kW. Förbrukningen är en uppskattning från WLTP-räckvidden: mät din med loggen."],
     colDc:["Fast DC {x} kW","Schnelllader DC {x} kW","Snabbladdare DC {x} kW"],
+    kommOne:["From your location: {n}, price area {a}, {tax}. Price area and fees were set for you; you can change them below.","Nach deinem Standort: {n}, Preisgebiet {a}, {tax}. Preisgebiet und Aufschläge wurden für dich eingestellt; du kannst sie unten ändern.","Utifrån din plats: {n}, elområde {a}, {tax}. Elområde och påslag har ställts in åt dig; du kan ändra dem nedan."],
+    kommTwo:["From your location: {n} lies in two price areas ({a}), {tax}. Choose the one on your electricity bill.","Nach deinem Standort: {n} liegt in zwei Preisgebieten ({a}), {tax}. Wähle das Gebiet von deiner Stromrechnung.","Utifrån din plats: {n} ligger i två elområden ({a}), {tax}. Välj det som står på din elräkning."],
+    taxNorm:["normal energy tax","normale Energiesteuer","normal energiskatt"],
+    taxLow:["reduced energy tax (northern Sweden)","ermäßigte Energiesteuer (Nordschweden)","sänkt energiskatt (norra Sverige)"],
     closeBig:["Close call","Knapp","Jämnt"],
     closeActHome:["Charging at home still saves {x} SEK/kWh, but only just. Charge if it suits you; hybrid mode costs almost the same.","Zuhause laden spart noch {x} SEK/kWh, aber nur knapp. Lade, wenn es dir passt; der Hybridmodus kostet fast dasselbe.","Att ladda hemma sparar fortfarande {x} SEK/kWh, men bara knappt. Ladda om det passar; hybridläge kostar nästan lika mycket."],
     closeActHev:["Charging at home would save only {x} SEK/kWh. Hybrid mode is almost as good; charge if you like.","Zuhause laden würde nur {x} SEK/kWh sparen. Der Hybridmodus ist fast genauso gut; lade, wenn du magst.","Att ladda hemma skulle bara spara {x} SEK/kWh. Hybridläge är nästan lika bra; ladda om du vill."],
     closeL1:["The gap to the {min} SEK/kWh limit is within ±{k}: a small change in petrol price, electricity price or consumption flips the answer.","Der Abstand zur Grenze von {min} SEK/kWh liegt innerhalb von ±{k}: Eine kleine Änderung bei Benzinpreis, Strompreis oder Verbrauch kippt die Antwort.","Avståndet till gränsen på {min} SEK/kWh ligger inom ±{k}: en liten ändring av bensinpris, elpris eller förbrukning vänder svaret."],
     foot:["The translations may contain mistakes: tell the owner if something reads wrong.","Die Übersetzungen können Fehler enthalten: Sag dem Betreiber Bescheid, wenn etwas falsch klingt.","Översättningarna kan innehålla fel: säg till ägaren om något låter fel."],
     privTitle:["Privacy and disclaimer","Datenschutz und Haftungsausschluss","Integritet och ansvarsfriskrivning"],
-    privText:["No accounts, no cookies, no tracking of individuals. The page counts anonymously, without identifiers, how often it is opened, which car type is chosen and which recommendation is shown (once per visit; switched off by Do Not Track). Your settings and consumption log stay in this browser on this device (only values that differ from the defaults are stored). Your position is used only on your phone, except the rounded position that goes to open-meteo.com if you switch on the temperature option. The page is hosted on GitHub Pages and loads its map tiles from OpenStreetMap, so that service sees your IP address. Safari can delete website data if you do not visit for a while.","Keine Konten, keine Cookies, keine Verfolgung einzelner Personen. Die Seite zählt anonym und ohne Kennung, wie oft sie geöffnet wird, welcher Fahrzeugtyp gewählt ist und welche Empfehlung erscheint (einmal pro Besuch; bei „Do Not Track“ aus). Deine Einstellungen und das Verbrauchsprotokoll bleiben in diesem Browser auf diesem Gerät (gespeichert werden nur Werte, die vom Standard abweichen). Dein Standort wird nur auf deinem Handy verwendet, außer der gerundeten Position, die an open-meteo.com geht, wenn du die Temperaturoption einschaltest. Die Seite liegt auf GitHub Pages und lädt die Kartenkacheln von OpenStreetMap; diese Dienste sehen deine IP-Adresse. Safari kann Websitedaten löschen, wenn du länger nicht vorbeischaust.","Inga konton, inga cookies, ingen spårning av enskilda. Sidan räknar anonymt och utan identifierare hur ofta den öppnas, vilken biltyp som väljs och vilken rekommendation som visas (en gång per besök; avstängt med Do Not Track). Dina inställningar och förbrukningsloggen stannar i den här webbläsaren på den här enheten (bara värden som skiljer sig från standard sparas). Din position används bara på din telefon, förutom den avrundade positionen som skickas till open-meteo.com om du slår på temperaturalternativet. Sidan ligger på GitHub Pages och hämtar kartrutorna från OpenStreetMap, så den tjänsten ser din IP-adress. Safari kan radera webbplatsdata om du inte besöker sidan på ett tag."],
+    privText:["No accounts, no cookies, no tracking of individuals. The page counts anonymously, without identifiers, how often it is opened, which car type is chosen and which recommendation is shown (once per visit; switched off by Do Not Track). Your settings and consumption log stay in this browser on this device (only values that differ from the defaults are stored). Your position is used only on your phone, except the rounded position that goes to open-meteo.com if you switch on the temperature option. Your municipality (for the price area and the energy tax) is worked out on the device from a border file; only its number is stored. The page is hosted on GitHub Pages and loads its map tiles from OpenStreetMap, so that service sees your IP address. Safari can delete website data if you do not visit for a while.","Keine Konten, keine Cookies, keine Verfolgung einzelner Personen. Die Seite zählt anonym und ohne Kennung, wie oft sie geöffnet wird, welcher Fahrzeugtyp gewählt ist und welche Empfehlung erscheint (einmal pro Besuch; bei „Do Not Track“ aus). Deine Einstellungen und das Verbrauchsprotokoll bleiben in diesem Browser auf diesem Gerät (gespeichert werden nur Werte, die vom Standard abweichen). Dein Standort wird nur auf deinem Handy verwendet, außer der gerundeten Position, die an open-meteo.com geht, wenn du die Temperaturoption einschaltest. Deine Gemeinde (für Preisgebiet und Energiesteuer) wird auf dem Gerät aus einer Grenzdatei bestimmt; gespeichert wird nur ihre Nummer. Die Seite liegt auf GitHub Pages und lädt die Kartenkacheln von OpenStreetMap; diese Dienste sehen deine IP-Adresse. Safari kann Websitedaten löschen, wenn du länger nicht vorbeischaust.","Inga konton, inga cookies, ingen spårning av enskilda. Sidan räknar anonymt och utan identifierare hur ofta den öppnas, vilken biltyp som väljs och vilken rekommendation som visas (en gång per besök; avstängt med Do Not Track). Dina inställningar och förbrukningsloggen stannar i den här webbläsaren på den här enheten (bara värden som skiljer sig från standard sparas). Din position används bara på din telefon, förutom den avrundade positionen som skickas till open-meteo.com om du slår på temperaturalternativet. Din kommun (för elområde och energiskatt) räknas ut på enheten från en gränsfil; bara dess nummer sparas. Sidan ligger på GitHub Pages och hämtar kartrutorna från OpenStreetMap, så den tjänsten ser din IP-adress. Safari kan radera webbplatsdata om du inte besöker sidan på ett tag."],
     discl:["This page gives an estimate, not advice. Prices, forecasts and charger data can be wrong or out of date; check the price in the charger's app. No liability for decisions based on it.","Diese Seite liefert eine Schätzung, keine Beratung. Preise, Prognosen und Ladedaten können falsch oder veraltet sein; prüfe den Preis in der App des Ladeanbieters. Keine Haftung für Entscheidungen auf dieser Grundlage.","Sidan ger en uppskattning, inte rådgivning. Priser, prognoser och laddardata kan vara fel eller gamla; kontrollera priset i laddoperatörens app. Inget ansvar för beslut som bygger på den."],
     privContact:["Operator and contact: via eurofuelprices.com. You can complain to IMY (Integritetsskyddsmyndigheten) if you think your data is handled wrongly.","Betreiber und Kontakt: über eurofuelprices.com. Du kannst dich bei der IMY (Integritetsskyddsmyndigheten) beschweren, wenn du meinst, dass deine Daten falsch behandelt werden.","Ansvarig och kontakt: via eurofuelprices.com. Du kan klaga hos IMY (Integritetsskyddsmyndigheten) om du anser att dina uppgifter hanteras fel."],
     saveFail:["Your settings cannot be saved in this browser (private mode or blocked storage). They are lost when you close the page.","Deine Einstellungen können in diesem Browser nicht gespeichert werden (privater Modus oder gesperrter Speicher). Sie gehen beim Schließen der Seite verloren.","Dina inställningar kan inte sparas i den här webbläsaren (privat läge eller blockerad lagring). De försvinner när du stänger sidan."],
@@ -643,7 +651,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     hours:1, homeHours:10, homeAmp:0, area:"SE4", contract:"avg",
     home:4.59, homeEdited:false, homeAdd:FEES_DEFAULT, feesEdited:false, petrol:15.80, petrolEdited:false,
     petrolAt:null, homeAt:null, feesAt:null, seasonAt:null,
-    tomorrow:0, trip:0, perWeek:null, noHome:false, model:null, dcPeak:null, log:[]
+    tomorrow:0, trip:0, perWeek:null, noHome:false, model:null, dcPeak:null, komm:null, taxRed:false, log:[]
   };
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", homeAdd:"feesEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
@@ -679,6 +687,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   S.useTemp = S.useTemp === true; S.noHome = S.noHome === true;
   if(typeof S.model !== "string" || S.model.length > 40){ S.model = null; }
   if(!isNum(S.dcPeak) || S.dcPeak < 20 || S.dcPeak > 500){ S.dcPeak = null; }
+  if(typeof S.komm !== "string" || !/^\d{4}$/.test(S.komm)){ S.komm = null; } S.taxRed = S.komm != null && S.taxRed === true;
   S.soc = Math.min(100, Math.max(0, S.soc));
   // A hand-typed price expires after 7 days and falls back to the live data (the page says so). Older saves without a date get 7 days from now.
   var EXPIRED = [], TODAY = new Date().toISOString().slice(0, 10);
@@ -690,6 +699,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     } else { S[p[1]] = null; }
   });
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
+  if(!S.feesEdited && S.taxRed){ S.homeAdd = FEES_DEFAULT - TAX_REDUCTION; }
   S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Use my location"
   S.temp = null;  // outside temperature, only while it is loaded
   S.hours = Math.min(12, Math.max(0.5, S.hours));
@@ -735,6 +745,34 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }
   // Another tab changed the settings: reload instead of overwriting them with this tab's old copy.
   window.addEventListener("storage", function(e){ if(e.key === KEY && e.newValue !== LASTW){ location.reload(); } });
+  // Municipality at a position (data/kommun.json: simplified borders, SCB CC0; price areas and tax zone from Boio El, CC BY 4.0). On the device only.
+  function inRing(r, la, lo){
+    var c = false, n = r.length / 2, i, j = n - 1;
+    for(i = 0; i < n; i++){
+      var yi = r[2 * i], xi = r[2 * i + 1], yj = r[2 * j], xj = r[2 * j + 1];
+      if((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi){ c = !c; }
+      j = i;
+    }
+    return c;
+  }
+  function kommunAt(doc, la, lo){
+    var hit = null;
+    (doc.k || []).forEach(function(k){ if(!hit){ var c = false; k.p.forEach(function(r){ if(inRing(r, la, lo)){ c = !c; } }); if(c){ hit = k; } } });
+    return hit;   // {c, n, a:[areas], t, p}; null outside the borders (the simplified border can miss a point on the coast)
+  }
+  window.__kommun = kommunAt;
+  function applyKommun(k){
+    N.kommun = k ? {n:k.n, a:k.a, t:k.t} : null;
+    if(!k){ notes(); return; }
+    S.komm = k.c; S.taxRed = k.t === 1;
+    if(k.a.indexOf(S.area) < 0){ S.area = k.a[0]; }       // one area: set it; two areas: keep the choice if it is one of them
+    if(!S.feesEdited){ S.homeAdd = FEES_DEFAULT - (S.taxRed ? TAX_REDUCTION : 0); }
+    save(); applySpot();
+  }
+  function loadKommun(la, lo){
+    fetch("data/kommun.json", {credentials:"omit"}).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){ applyKommun(kommunAt(d, la, lo)); }).catch(function(){});
+  }
   // Anonymous counters on the EuroFuelPrices worker (what is used, never who): a fixed list of names, at most once per browser session,
   // no cookie, no identifier, no referrer; only on the live site (not in tests or local previews); off with Do Not Track / Global Privacy Control.
   function count(q){
@@ -1203,7 +1241,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         N.locDone = true; count("e=wtc_locate");
         N.locSt = {k:"locDone", p:{acc:Math.round(pos.coords.accuracy)}, far:(N.ch.length && N.ch[0].dist > 30) ? N.ch[0].dist : null};
         syncInputs(); update(); drawMap(la, lo);
-        loadDC();
+        loadDC(); loadKommun(la, lo);
         if(S.useTemp){ loadTemp(); }
       }).catch(function(){ setLoc("locErr"); });
     }, function(){ setLoc("locDenied"); }, {timeout:15000});
@@ -1334,6 +1372,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     [].forEach.call($("homeamps").children, function(b){ var a = +b.getAttribute("data-a"); b.textContent = a ? a + " A (" + fmt(a * MAINS_V / 1000, 2) + " kW)" : t("wallbox"); b.setAttribute("aria-pressed", a === S.homeAmp); });
     $("nohomewrap").hidden = ty !== "bev"; $("nohome").checked = S.noHome;
     [].forEach.call($("kind").children, function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-k") === ty); });
+    $("kommnote").textContent = N.kommun ? t(N.kommun.a.length > 1 ? "kommTwo" : "kommOne", {n:N.kommun.n, a:N.kommun.a.join(" / "), tax:t(N.kommun.t ? "taxLow" : "taxNorm")}) : "";
     $("basisline").textContent = t("basisLine", {area:S.area, home:fmt(N.homeEff != null ? N.homeEff : S.home), petrol:fmt(S.petrol), season:S.temp != null ? fmt(S.temp, 1) + " °C" : t(S.season === "winter" ? "winter" : "summer")});
     $("sWinter").setAttribute("aria-pressed", S.temp == null && S.season === "winter");
     $("sSummer").setAttribute("aria-pressed", S.temp == null && S.season === "summer");
