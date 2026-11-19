@@ -182,6 +182,18 @@ document.querySelector("iframe").onload = function () {
   yes("BEV with home charging is unchanged", adv(calc(mk({petrol: 15, home: 2, soc: 30, noHome: false}, "bev"), null), 1).big === "Charge at home");
   yes("a plug-in hybrid ignores the no-home flag", adv(calc(mk({home: 4.0, noHome: true}), null), 1).big === "Charge at home");
 
+  // --- fast chargers (second file, electric cars): not filtered by kW, own ids, connector names, DC power model ---
+  var dcFile = {v: 1, kind: "dc", ops: ["Ionity"], s: [[55.7, 13.2, 1, 350, 4, 0, 25, "Test stop", 1 | 2], [55.71, 13.2, 1, 50, 2, 0, 25, "Small", 2]]};
+  var dcList = bc(dcFile, 55.7, 13.2, true);
+  yes("fast chargers are not cut at 22 kW and are marked", dcList.length === 2 && dcList[0].dc === true && dcList[0].kw === 350 && dcList[0].mask === 3);
+  yes("fast charger ids do not clash with AC ids", /^d/.test(dcList[0].id));
+  yes("AC list still drops anything above 22 kW", bc(dcFile, 55.7, 13.2).length === 0);
+  var dcBev = calc(mk({petrol: 15, home: 2, soc: 30, hours: 1}, "bev"), {id: "d1", name: "D", op: "", kw: 350, dc: true});
+  eq("DC: car peak 150 kW, charger 350 kW: 0.66 x 150", dcBev.road.pw, 99, 0.01);
+  eq("DC: a 50 kW charger limits it: 0.66 x 50", calc(mk({petrol: 15, home: 2, soc: 30, hours: 1}, "bev"), {id: "d2", name: "D", op: "", kw: 50, dc: true}).road.pw, 33, 0.01);
+  eq("AC charger of the same car is still limited by the car's 11 kW", calc(mk({petrol: 15, home: 2, soc: 30, hours: 1}, "bev"), {id: "a1", name: "A", op: "", kw: 22}).road.pw, 11);
+  yes("small BEV peaks lower than a large one", P.bev_s.dc < P.bev.dc && P.bev.dc < P.bev_l.dc);
+
   // --- petrol: crowd only, brand median, plausibility band, tax step ---
   var pm = W.__petrol, T0 = Date.parse("2026-11-18T12:00:00Z"), stamp = "2026-11-17T15:00:00+00:00";
   function stn(brand, price, src, at) { return {brand: brand, prices: [{octane: 95, price: price, source: src || "bensinpriser", updated_at: at === undefined ? stamp : at}]}; }

@@ -186,7 +186,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   </section>
 
   <section class="card">
-    <h2 data-i18n="chTitle">Chargers near you (Type 2, AC)</h2>
+    <h2 id="chHead" data-i18n="chTitle">Chargers near you (Type 2, AC)</h2>
     <p id="mapmsg" class="small" style="margin:0"></p>
     <div id="map"></div>
     <div id="chselwrap" hidden>
@@ -348,9 +348,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     phev:    {type:"phev", perWeek:5, v:{usable:10, kw:3.7, hold:10, elS:20, elW:26, lS:6.5, lW:7.5}},
     phev_l:  {type:"phev", perWeek:5, v:{usable:14, kw:7.4, hold:10, elS:22, elW:29, lS:8.0, lW:9.0}},
     santafe: {type:"phev", perWeek:5, v:{usable:10.4, kw:3.6, hold:15, elS:19, elW:25, lS:7.0, lW:8.3}},
-    bev_s:   {type:"bev",  perWeek:2, v:{usable:40, kw:7.4, hold:10, elS:15, elW:19, lS:5.5, lW:6.5}},
-    bev:     {type:"bev",  perWeek:2, v:{usable:55, kw:11, hold:10, elS:17, elW:22, lS:6.5, lW:7.5}},
-    bev_l:   {type:"bev",  perWeek:2, v:{usable:80, kw:11, hold:10, elS:20, elW:26, lS:8.0, lW:9.5}}
+    bev_s:   {type:"bev",  perWeek:2, dc:100, v:{usable:40, kw:7.4, hold:10, elS:15, elW:19, lS:5.5, lW:6.5}},
+    bev:     {type:"bev",  perWeek:2, dc:150, v:{usable:55, kw:11, hold:10, elS:17, elW:22, lS:6.5, lW:7.5}},
+    bev_l:   {type:"bev",  perWeek:2, dc:200, v:{usable:80, kw:11, hold:10, elS:20, elW:26, lS:8.0, lW:9.5}}
   };
   var CVKEYS = ["usable", "kw", "hold", "elS", "elW", "lS", "lW"];
 
@@ -592,6 +592,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     costHome:["Home, now","Zuhause, jetzt","Hemma, nu"], costAc:["Public AC","Öffentlich AC","Offentlig AC"], costDc:["Public fast DC","Öffentlich Schnelllader DC","Offentlig snabbladdare DC"], costPet:["Comparable petrol car","Vergleichbarer Benziner","Jämförbar bensinbil"],
     costBe:["An electric car beats the petrol car up to {x} SEK/kWh.","Das Elektroauto ist günstiger als der Benziner bis {x} SEK/kWh.","Elbilen är billigare än bensinbilen upp till {x} SEK/kWh."],
     costStale:["The public prices are from {date}, over {n} days old: check the app.","Die öffentlichen Preise stammen vom {date}, über {n} Tage alt: Prüfe die App.","De offentliga priserna är från {date}, över {n} dagar gamla: kontrollera appen."],
+    chTitleBev:["Chargers near you (AC and fast DC)","Ladepunkte in deiner Nähe (AC und Schnelllader DC)","Laddare nära dig (AC och snabbladdare DC)"],
+    fastDc:["Fast DC","Schnelllader DC","Snabbladdare DC"],
+    pwDc:["Charging power used: about {kw} kW on average at {name} (the charger offers up to {ckw} kW; a typical car of this size peaks at {peak} kW, and the average from 10 to 80 % is about two thirds of that). A rough estimate: cold batteries and shared chargers are slower.","Verwendete Ladeleistung: durchschnittlich etwa {kw} kW bei {name} (der Lader bietet bis zu {ckw} kW; ein typisches Auto dieser Größe schafft höchstens {peak} kW, und der Durchschnitt von 10 bis 80 % liegt bei etwa zwei Dritteln davon). Grobe Schätzung: kalte Akkus und geteilte Lader sind langsamer.","Använd laddeffekt: i genomsnitt cirka {kw} kW vid {name} (laddaren erbjuder upp till {ckw} kW; en typisk bil av den här storleken når högst {peak} kW, och genomsnittet från 10 till 80 % är ungefär två tredjedelar av det). En grov uppskattning: kalla batterier och delade laddare är långsammare."],
     closeBig:["Close call","Knapp","Jämnt"],
     closeActHome:["Charging at home still saves {x} SEK/kWh, but only just. Charge if it suits you; hybrid mode costs almost the same.","Zuhause laden spart noch {x} SEK/kWh, aber nur knapp. Lade, wenn es dir passt; der Hybridmodus kostet fast dasselbe.","Att ladda hemma sparar fortfarande {x} SEK/kWh, men bara knappt. Ladda om det passar; hybridläge kostar nästan lika mycket."],
     closeActHev:["Charging at home would save only {x} SEK/kWh. Hybrid mode is almost as good; charge if you like.","Zuhause laden würde nur {x} SEK/kWh sparen. Der Hybridmodus ist fast genauso gut; lade, wenn du magst.","Att ladda hemma skulle bara spara {x} SEK/kWh. Hybridläge är nästan lika bra; ladda om du vill."],
@@ -739,6 +742,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   }
   // st = settings, ch = the chosen charger (or null). The road price is unknown by design: the road option only gets
   // what it can deliver (kWh, km, petrol saved) and the highest price worth paying.
+  var DC_AVG = 0.66, DC_NAMES = {1:"CCS", 2:"CHAdeMO", 4:"Tesla", 8:"MCS"};
+  function chargePw(st, ch){
+    var kw = st.cv.kw;
+    if(ch && ch.dc){ var pk = PRESETS[st.car] && PRESETS[st.car].dc || 100; return Math.min(pk, ch.kw || pk) * DC_AVG; }
+    return Math.min(kw, (ch && ch.kw) || kw);
+  }
   function calc(st, ch){
     var cv = st.cv, se = consumption(st), kw = cv.kw;
     var lPerKwh = se.l / se.el, per = 100 / se.el;
@@ -751,7 +760,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     h.cost = h.kwh * h.price; h.km = h.kwh * per; h.litres = h.kwh * lPerKwh; h.saved = h.kwh * value; h.total = h.net * h.kwh;
     var road = null;
     if(ch){
-      var pw = Math.min(kw, ch.kw || kw), kwh = Math.min(free, st.hours * pw);
+      var pw = chargePw(st, ch), kwh = Math.min(free, st.hours * pw);
       road = {name:ch.name, op:ch.op, pw:pw, kwh:kwh, km:kwh * per, litres:kwh * lPerKwh, saved:kwh * value};
     }
     // km on electricity after `hours` at a charger of `power` kW (the car's own limit applies), and hours for a full charge
@@ -808,17 +817,18 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     return a;
   }
   window.__facts = facts;
-  function chLabel(c){ return c.name + " · " + (c.op === "operator unknown" ? t("opUnknown") : c.op) + " · " + (c.kw ? c.kw + " kW" : t("chPower")) + " · Type 2 AC" + (c.pts ? " · " + (c.pts === 1 ? t("fPts1") : t("fPtsN", {n:c.pts})) : ""); }
+  function chConn(c){ return [1, 2, 4, 8].filter(function(b){ return c.mask & b; }).map(function(b){ return DC_NAMES[b]; }).join("/"); }
+  function chLabel(c){ return c.name + " · " + (c.op === "operator unknown" ? t("opUnknown") : c.op) + " · " + (c.dc ? t("fastDc") + " " : "") + (c.kw ? c.kw + " kW" : t("chPower")) + " · " + (c.dc ? chConn(c) : "Type 2 AC") + (c.pts ? " · " + (c.pts === 1 ? t("fPts1") : t("fPtsN", {n:c.pts})) : ""); }
 
   // Chargers around a position, nearest first: one entry per site and operator, Type 2 AC up to 22 kW, the 150 nearest.
-  function buildChargers(ev, la, lo){
+  function buildChargers(ev, la, lo, dc){
     if(ev.v !== 1){ throw 0; }   // column layout is only known for version 1
     var seen = {};
     return ev.s.map(function(x){
       var op = x[2] > 0 ? ev.ops[x[2]-1] : "", key = nrm(op);
       // id = position + operator, stable when the file is rebuilt; two operators at one site stay separate
-      return {id:"s" + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
-    }).filter(function(c){ if(c.kw > 22 || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
+      return {dc:!!dc, mask:x[8] | 0, id:(dc ? "d" : "s") + Math.round(x[0] * 1e4) + "_" + Math.round(x[1] * 1e4) + (key ? "_" + key.replace(/[^a-z0-9]/g, "") : ""), name:x[7] || "Charger", op:key ? op : "operator unknown", kw:+x[3] || 0, pts:+x[4] || 0, f:x[5] | 0, yy:+x[6] || 0, lat:x[0], lon:x[1], dist:hav(la, lo, x[0], x[1])};
+    }).filter(function(c){ if((!dc && c.kw > 22) || seen[c.id]){ return false; } seen[c.id] = 1; return true; })
       .sort(function(a, b){ return a.dist - b.dist; }).slice(0, 150);
   }
   window.__chargers = buildChargers;
@@ -1041,7 +1051,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var MAP = {map:null, markers:{}, me:null};
   function styleMarkers(){
     Object.keys(MAP.markers).forEach(function(id){
-      MAP.markers[id].setStyle(id === S.sel ? {radius:11, fillColor:"#17803d", color:"#fff", weight:3, fillOpacity:1} : {radius:7, fillColor:"#e08a00", color:"#fff", weight:2, fillOpacity:.95});
+      MAP.markers[id].setStyle(id === S.sel ? {radius:11, fillColor:"#17803d", color:"#fff", weight:3, fillOpacity:1} : {radius:7, fillColor:MAP.markers[id]._dc ? "#7a3fc4" : "#e08a00", color:"#fff", weight:2, fillOpacity:.95});
       if(id === S.sel){ MAP.markers[id].bringToFront(); }
     });
   }
@@ -1062,12 +1072,28 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     N.ch.forEach(function(c){
       var m = L.circleMarker([c.lat, c.lon], {radius:7}).addTo(MAP.map).bindTooltip(esc(chLabel(c)));
       m.on("click", function(){ S.sel = c.id; update(); });
-      MAP.markers[c.id] = m;
+      m._dc = !!c.dc; MAP.markers[c.id] = m;
     });
     var pts = [[la, lo]].concat(N.ch.slice(0, 30).map(function(c){ return [c.lat, c.lon]; }));
     MAP.map.invalidateSize();
     MAP.map.fitBounds(L.latLngBounds(pts), {padding:[24, 24], maxZoom:15});
     styleMarkers();
+  }
+  function mergeCh(){
+    var bev = PRESETS[S.car].type === "bev";
+    return bev && N.chDC ? N.chAC.concat(N.chDC).sort(function(a, b){ return a.dist - b.dist; }).slice(0, 200) : N.chAC;
+  }
+  function refreshCh(){
+    if(!N.loc || !N.chAC){ return; }
+    N.ch = mergeCh();
+    if(!selCharger()){ S.sel = N.ch.length ? N.ch[0].id : null; }
+    update(); drawMap(N.loc.la, N.loc.lo);
+  }
+  function loadDC(){
+    if(!N.loc || !N.chAC){ return; }
+    if(PRESETS[S.car].type !== "bev" || N.chDC){ refreshCh(); return; }
+    getJ("ev_dc_se.json").then(function(d){ N.chDC = buildChargers(d, N.loc.la, N.loc.lo, true); N.dcErr = false; })
+      .catch(function(){ N.chDC = []; N.dcErr = true; }).then(refreshCh);
   }
   function renderChSelect(){
     var sel = $("chsel");
@@ -1127,7 +1153,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       Promise.all([getJ("ev_se.json"), getSE()]).then(function(r){
         var ev = r[0];
         N.evsrc = {old:Date.now() - Date.parse(ev.generated) > 21 * 864e5, gen:String(ev.generated || ""), by:(ev.sources || []).map(function(n){ return n === "NOBIL" ? "NOBIL by Enova (CC BY 4.0)" : n === "OCM" ? "Open Charge Map contributors (CC BY 4.0)" : String(n); })};
-        N.ch = buildChargers(ev, la, lo);
+        N.chAC = buildChargers(ev, la, lo); N.ch = N.chAC;
         S.sel = N.ch.length ? N.ch[0].id : null;   // the nearest charger is preselected; tap another on the map or clear it
         var pe = [];
         r[1].stations.forEach(function(s){
@@ -1142,6 +1168,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         N.locDone = true; count("e=wtc_locate");
         N.locSt = {k:"locDone", p:{acc:Math.round(pos.coords.accuracy)}, far:(N.ch.length && N.ch[0].dist > 30) ? N.ch[0].dist : null};
         syncInputs(); update(); drawMap(la, lo);
+        loadDC();
         if(S.useTemp){ loadTemp(); }
       }).catch(function(){ setLoc("locErr"); });
     }, function(){ setLoc("locDenied"); }, {timeout:15000});
@@ -1254,6 +1281,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var c = selCharger(), ty = PRESETS[S.car].type, cons = consumption(S), usable = S.cv.usable;
     document.documentElement.lang = S.lang; document.title = t("title");
     [].forEach.call(document.querySelectorAll("[data-i18n]"), function(e){ e.textContent = t(e.getAttribute("data-i18n")); });
+    $("chHead").textContent = t(ty === "bev" ? "chTitleBev" : "chTitle");
     [].forEach.call($("langs").children, function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-l") === S.lang); });
     var ls = N.locSt;
     $("locmsg").textContent = ls ? t(ls.k, ls.p) + (ls.far != null ? t("locFar", {km:fmt(ls.far, 0)}) : "") : t("locHint");
@@ -1304,7 +1332,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(!S.feesEdited && S.contract !== "fixed" && new Date() > new Date(FEES_VALID_TO + "T23:59:59")){ w.push(t("warnFees")); }
     if(!SAVE_OK){ w.push(t("saveFail")); }
     $("pricewarn").textContent = w.join(" ");
-    $("pwnote").textContent = c ? t("pwChosen", {kw:fmt(Math.min(S.cv.kw, c.kw || S.cv.kw), 1), name:c.name, ckw:c.kw ? ", " + c.kw + " kW" : ""}) : t("pwNone", {kw:fmt(S.cv.kw, 1)});
+    $("pwnote").textContent = c && c.dc ? t("pwDc", {kw:fmt(chargePw(S, c), 0), name:c.name, ckw:c.kw || "?", peak:PRESETS[S.car].dc || 100}) : c ? t("pwChosen", {kw:fmt(chargePw(S, c), 1), name:c.name, ckw:c.kw ? ", " + c.kw + " kW" : ""}) : t("pwNone", {kw:fmt(S.cv.kw, 1)});
   }
 
   function update(){
@@ -1341,10 +1369,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   CVKEYS.forEach(function(k){
     $("cv" + k).addEventListener("input", function(e){ var v = num(e.target.value, null); if(v != null){ S.cv[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], v)); save(); update(); } });
   });
-  $("car").addEventListener("change", function(e){ S.car = e.target.value; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); });
+  $("car").addEventListener("change", function(e){ S.car = e.target.value; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); loadDC(); });
   [].forEach.call($("kind").children, function(b){ b.addEventListener("click", function(){
     var k = b.getAttribute("data-k"); if(PRESETS[S.car].type === k){ return; }
-    S.car = k; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update();
+    S.car = k; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); loadDC();
   }); });
   $("more").addEventListener("toggle", function(){ if(this.open && typeof MAP !== "undefined" && MAP && MAP.map){ setTimeout(function(){ MAP.map.invalidateSize(); }, 50); } });
   $("nohome").addEventListener("change", function(e){ S.noHome = e.target.checked; save(); update(); });

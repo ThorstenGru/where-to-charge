@@ -54,7 +54,7 @@ Consumption is the summer value, the winter value, or in between by outside temp
 
 ## Known gaps
 1. Sweden only. Other countries need their own petrol, spot and charger data.
-2. Only Type 2 AC chargers: for an electric car the fast DC chargers on the road are missing.
+2. Fast chargers (CCS, CHAdeMO, Tesla, MCS; file `ev_dc_se.json` from the EuroFuelPrices pipeline, about 2,300 Swedish stations) are shown for electric cars only. Their kW is the charger's rated power, a ceiling; the page assumes about two thirds of the car's fast-charging peak on average (10 to 80 %), a rough estimate. Plug-in hybrids see Type 2 AC only. Not modelled: charging only to 80 %, cold batteries, shared hub power.
 3. "Nearest" means straight-line distance, no routing.
 4. No live availability or fault status of chargers (the data source for that has its own terms, not checked).
 5. The typical car values are estimates; the page has not been tested on a real phone.
