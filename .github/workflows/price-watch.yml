@@ -1,0 +1,29 @@
+name: Price watch
+# Weekly: do the operators' own price pages still say what index.html uses (PUBLIC band)? Never changes the page; opens one issue when something differs.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the price pages
+        id: watch
+        continue-on-error: true
+        run: python3 tools/price_watch.py | tee watch.txt
+      - name: Open an issue when something differs
+        if: steps.watch.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(gh issue list --state open --label price-watch --json number --jq '.[0].number')" ]; then
+            gh label create price-watch --description "Charging list prices changed" --color e08a00 || true
+            gh issue create --label price-watch --title "Charging list prices changed or unreadable" --body "$(printf 'The weekly price watch found a difference. Re-check the operator pages by hand, then update PUBLIC in index.html and tools/price_watch.py.\n\n```\n%s\n```\n' "$(cat watch.txt)")"
+          else
+            echo "an issue is already open"
+          fi

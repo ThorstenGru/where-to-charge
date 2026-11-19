@@ -12,3 +12,5 @@ jobs:
           google-chrome --headless=new --no-sandbox --virtual-time-budget=15000 --dump-dom http://localhost:8765/tests/calc.test.html > dom.html
           # the script text also contains the words, so look at the result element itself
           grep -q '<pre id="o">ALL PASSED' dom.html || { grep -o '<pre id="o">.*' dom.html | head -20; exit 1; }
+      - name: Price watch parsing (offline)
+        run: python3 tools/price_watch.py --selftest
