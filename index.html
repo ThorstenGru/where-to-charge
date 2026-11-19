@@ -15,7 +15,7 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous"></script>
 <style>
 :root{
-  --bg:#eef1ec; --surface:#ffffff; --ink:#15201b; --muted:#5d6b64; --line:#d5dcd5;
+  --bg:#eef1ec; --surface:#ffffff; --ink:#15201b; --muted:#5d6b64; --line:#d5dcd5; --field:#7b8780;
   --home:#1f5fa8; --home-bg:#dce9f7;
   --remote:#17803d; --remote-bg:#d9f0e0;
   --hev:#a86400; --hev-bg:#fbe9c8;
@@ -27,7 +27,7 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0f1512; --surface:#18211c; --ink:#e8efe9; --muted:#97a69d; --line:#2b3831;
+    --bg:#0f1512; --surface:#18211c; --ink:#e8efe9; --muted:#97a69d; --line:#2b3831; --field:#6f8076;
     --home:#7db4f0; --home-bg:#16293e;
     --remote:#5fd18a; --remote-bg:#12301d;
     --hev:#f0b44f; --hev-bg:#3a2a0c;
@@ -59,7 +59,7 @@ h2{font-size:15px;font-weight:700;margin:0 0 10px}
 .gap{height:14px}
 label.l{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 input[type="text"]{width:100%;font:inherit;font-size:17px;padding:10px 10px;border-radius:10px;
-  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+  border:1px solid var(--field);background:var(--bg);color:var(--ink)}
 input[type="range"]{width:100%;accent-color:var(--remote)}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -102,7 +102,7 @@ th{font-weight:600;color:var(--muted);border-top:0}
 #map:empty{display:none}
 #chinfo{margin-top:8px;font-size:14px}
 a{color:var(--home)}
-select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+select{width:100%;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--field);background:var(--bg);color:var(--ink)}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin-top:10px}
 .check input{width:20px;height:20px;margin-top:1px;accent-color:var(--remote)}
 details summary{cursor:pointer;font-weight:700;font-size:14px}
@@ -152,6 +152,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       <button id="sSummer" aria-pressed="false" data-i18n="summer">Summer</button>
     </div>
     <label class="check"><input type="checkbox" id="usetemp"><span data-i18n="useTemp"></span></label>
+    <p class="small" style="margin:4px 0 0"><a href="https://open-meteo.com/" rel="noopener">Weather data by Open-Meteo.com</a></p>
     <p id="seasonnote" class="hint"></p>
   </section>
 
@@ -279,7 +280,23 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       <p class="small" style="margin:8px 0 0" data-i18n="setCommon"></p>
     </details>
   </section>
+  <details class="card" id="privacy">
+    <summary data-i18n="privTitle"></summary>
+    <p class="small" data-i18n="privText"></p>
+    <p class="small" data-i18n="discl"></p>
+    <p class="small" data-i18n="privContact"></p>
+    <button id="resetall" class="chip" data-i18n="resetAll"></button>
+  </details>
   <p class="hint" data-i18n="foot"></p>
+  <p class="hint" id="credits">Data and licences:
+    <a href="https://eurofuelprices.com/" rel="noopener">eurofuelprices.com</a> ·
+    <a href="https://bensinpriser.nu/" rel="noopener">bensinpriser.nu</a> ·
+    <a href="https://www.anwb.nl/" rel="noopener">ANWB</a> ·
+    <a href="https://www.elprisetjustnu.se/" rel="noopener">Elpriser tillhandahålls av Elpriset just nu.se</a> ·
+    <a href="https://nobil.no/" rel="noopener">NOBIL by Enova</a> (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>) ·
+    <a href="https://www.openstreetmap.org/copyright" rel="noopener">© OpenStreetMap contributors</a> (ODbL) ·
+    <a href="https://leafletjs.com/" rel="noopener">Leaflet</a> ·
+    <a href="https://open-meteo.com/" rel="noopener">Weather data by Open-Meteo.com</a></p>
 </main>
 
 <script>
@@ -292,8 +309,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var CONTRACTS = ["avg", "hourly", "fixed"];
   var MIN_GAIN = 0.3;   // SEK per kWh: below this charging is not worth the effort
   var VAT = 1.25, FEES_DEFAULT = 0.73337;   // fees default: one household's October 2026 bills (variable 0.11497 + grid 0.2584 + energy tax 0.36)
+  // Petrol tax steps, SEK/l incl. VAT (Regeringen PM 2026: +3.00 on 2026-12-01; +0.125 on 2027-01-01). A price stamped before a step
+  // is raised by it once the step date has passed, because pumps pass the change on within days. Hand-kept, see docs/RESEARCH_2026-11-18.md 2.3.
+  var TAXSTEPS = [{from:"2026-12-01", add:3.00}, {from:"2027-01-01", add:0.125}];
+  var PETROL_ESTIMATE_DAYS = 3, PRICE_EXPIRY_DAYS = 7;   // an adjusted price counts as estimate for 3 days; hand-typed prices expire after 7
   var FEES_VALID_TO = "2026-12-31";   // fees usually change on 1 January: warn after this date while the default is untouched
-  var DECAY = 0.7, HIST = ["2023", "2024", "2025"];
+  var DECAY = 0.7;
+  // "Typical" = the same month in the last three full years, never 2022 (the crisis year pushed every estimate up by about 10 %).
+  function histYears(y){ return [y - 3, y - 2, y - 1].filter(function(h){ return h >= 2023; }).map(String); }
   var BASE = "https://eurofuelprices.com/";
   // Car presets: usable = kWh from the socket for the usable battery span, kw = AC limit, hold = % where hybrid mode takes over (PHEV) or reserve (BEV),
   // el = electric kWh/100 km (S summer, W winter, from the socket), l = petrol l/100 km (hybrid mode, or the comparison petrol car for a BEV).
@@ -411,8 +434,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     petAsOf:["as of {d}","Stand {d}","per {d}"],
     petNoDate:["date unknown","Datum unbekannt","datum okänt"],
     petSrcPump:["Petrol price from {name}, {km} km away, {when}. No forecast: today's pump price only.","Benzinpreis von {name}, {km} km entfernt, {when}. Keine Prognose: nur der heutige Zapfsäulenpreis.","Bensinpris från {name}, {km} km bort, {when}. Ingen prognos: bara dagens pumppris."],
-    petSrcFresh:["Daily price, loaded automatically: national median of {n} prices dated in the last 3 days{newest}. Tap “Use my location” to use a pump near you.","Tagespreis, automatisch geladen: Median von {n} Preisen der letzten 3 Tage in Schweden{newest}. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Dagspris, laddas automatiskt: median av {n} priser från de senaste 3 dagarna i Sverige{newest}. Tryck på ”Använd min plats” för en pump nära dig."],
-    petSrcOld:["Few dated prices today: median of all {n} Swedish prices, some may be older{newest}. Tap “Use my location” to use a pump near you.","Wenige Preise mit Datum heute: Median aller {n} schwedischen Preise, einige können älter sein{newest}. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Få priser med datum idag: median av alla {n} svenska priser, vissa kan vara äldre{newest}. Tryck på ”Använd min plats” för en pump nära dig."],
+    petSrcFresh:["Daily price, loaded automatically: typical Swedish pump price (median of the brand medians, {n} user-reported prices from the last 3 days{newest}). Single pumps differ by a few tens of öre. Tap “Use my location” to use a pump near you.","Tagespreis, automatisch geladen: typischer Pumpenpreis in Schweden (Median der Marken-Mediane, {n} gemeldete Preise der letzten 3 Tage{newest}). Einzelne Tankstellen weichen um einige Zehn Öre ab. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Dagspris, laddas automatiskt: typiskt pumppris i Sverige (median av märkesmedianerna, {n} rapporterade priser från de senaste 3 dagarna{newest}). Enskilda pumpar skiljer några tiotal öre. Tryck på ”Använd min plats” för en pump nära dig."],
+    petSrcOld:["Few dated prices today: median of the brand medians of {n} user-reported prices, some may be older{newest}. Tap “Use my location” to use a pump near you.","Wenige Preise mit Datum heute: Median der Marken-Mediane aus {n} gemeldeten Preisen, einige können älter sein{newest}. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe.","Få priser med datum idag: median av märkesmedianerna från {n} rapporterade priser, vissa kan vara äldre{newest}. Tryck på ”Använd min plats” för en pump nära dig."],
+    petTaxEst:[" Estimate: the petrol tax step of {x} SEK/l is added to prices reported before it."," Schätzung: Die Benzinsteuer-Stufe von {x} SEK/l ist auf Preise vor der Stufe aufgeschlagen."," Uppskattning: bensinskattens steg på {x} SEK/l är tillagt på priser från före steget."],
+    warnTax:["Petrol tax rises by {x} SEK/l on {d}. The page adds it automatically.","Die Benzinsteuer steigt am {d} um {x} SEK/l. Die Seite rechnet sie automatisch ein.","Bensinskatten höjs med {x} SEK/l den {d}. Sidan lägger på den automatiskt."],
+    priceExpired:["Your own {what} from {d} expired after 7 days; the current data applies again.","Dein eigener Wert für {what} vom {d} ist nach 7 Tagen abgelaufen; es gelten wieder die aktuellen Daten.","Ditt eget värde för {what} från {d} har gått ut efter 7 dagar; aktuella data gäller igen."],
+    expPetrol:["petrol price","Benzinpreis","bensinpris"], expHome:["home price","Heimpreis","hempris"], expFees:["fees","Aufschläge","påslag"],
     petSrcErr:["No current petrol data. Using the built-in default of {x} SEK/l. Tap “Use my location” to try again.","Keine aktuellen Benzindaten. Es gilt der eingebaute Standardwert von {x} SEK/l. Tippe auf „Meinen Standort nutzen“, um es erneut zu versuchen.","Inga aktuella bensindata. Det inbyggda standardvärdet {x} SEK/l används. Tryck på ”Använd min plats” för att försöka igen."],
     petSrcHand:["Hand-entered or default petrol price. Tap “Use my location” to use a pump near you. No forecast: today's price only.","Von Hand eingegebener oder Standard-Benzinpreis. Tippe auf „Meinen Standort nutzen“ für eine Tankstelle in deiner Nähe. Keine Prognose: nur der heutige Preis.","Handskrivet eller standardpris för bensin. Tryck på ”Använd min plats” för en pump nära dig. Ingen prognos: bara dagens pris."],
     newest:[" (newest {d})"," (neueste {d})"," (senaste {d})"],
@@ -421,12 +448,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     areaHint:["SE1 north (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 south (Malmö).","SE1 Norden (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 Süden (Malmö).","SE1 norr (Luleå), SE2 (Sundsvall), SE3 (Stockholm, Göteborg), SE4 söder (Malmö)."],
     contractLabel:["Your electricity contract","Dein Stromvertrag","Ditt elavtal"],
     c_avg:["Monthly average","Monatsmittel","Månadsmedel"],
-    c_hourly:["Hourly spot","Stündlich (Spot)","Timpris (spot)"],
+    c_hourly:["Hourly or 15-min spot","Stündlich/Viertelstunde (Spot)","Timpris/kvartspris (spot)"],
     c_fixed:["Fixed price","Festpreis","Fast pris"],
     cHintAvg:["Billed at the average spot price of the whole month (typical for Swedish “rörligt” contracts): the day or hour of charging does not matter and the final price is only known after the month ends. Tap a month to use its price:","Abgerechnet wird zum Durchschnittspreis des ganzen Monats (typisch für schwedische „rörligt“-Verträge): Tag und Uhrzeit des Ladens spielen keine Rolle, und der Endpreis steht erst nach Monatsende fest. Tippe einen Monat an, um seinen Preis zu nutzen:","Faktureras efter spotprisets medelvärde för hela månaden (typiskt för rörliga avtal): dag och timme för laddningen spelar ingen roll och slutpriset är först känt när månaden är slut. Tryck på en månad för att använda dess pris:"],
     cHintHourly:["Billed hour by hour: the price is the average of the cheapest {n} hours in the next 24 h (as far as the prices are published): {hours}. Charge then.","Abgerechnet wird stundenweise: Der Preis ist der Durchschnitt der günstigsten {n} Stunden der nächsten 24 h (soweit die Preise veröffentlicht sind): {hours}. Lade dann.","Faktureras timme för timme: priset är medelvärdet av de {n} billigaste timmarna de närmaste 24 h (så långt priserna är publicerade): {hours}. Ladda då."],
     cHintHourlyNo:["No hourly prices available right now: enter your price below.","Gerade keine Stundenpreise verfügbar: Gib unten deinen Preis ein.","Inga timpriser tillgängliga just nu: ange ditt pris nedan."],
-    cHintFixed:["Fixed price: enter your price per kWh incl. VAT below.","Festpreis: Gib unten deinen Preis pro kWh inkl. MwSt. ein.","Fast pris: ange ditt pris per kWh inkl. moms nedan."],
+    cHintFixed:["Fixed price: enter your TOTAL price per kWh below: supplier price + grid fee + energy tax, incl. VAT (the number shown until you type is only the monthly estimate).","Festpreis: Gib unten deinen GESAMTpreis pro kWh ein: Lieferantenpreis + Netzgebühr + Energiesteuer, inkl. MwSt. (die Zahl bis zur Eingabe ist nur die Monatsschätzung).","Fast pris: ange ditt TOTALA pris per kWh nedan: elhandelspris + nätavgift + energiskatt, inkl. moms (siffran innan du skriver är bara månadsuppskattningen)."],
     priceLabel:["Home electricity price (SEK/kWh incl. VAT)","Strompreis zuhause (SEK/kWh inkl. MwSt.)","Elpris hemma (SEK/kWh inkl. moms)"],
     feesLabel:["Fees on top of the spot price (SEK/kWh, excl. VAT)","Aufschläge auf den Spotpreis (SEK/kWh, ohne MwSt.)","Påslag på spotpriset (SEK/kWh, exkl. moms)"],
     feesHint:["Supplier variable costs and markup + grid transfer + energy tax from your bill. The default 0.73 comes from one household in southern Sweden (October 2026 bills): replace it with yours. Price = (spot + fees) × 1.25.","Variable Kosten und Aufschlag des Lieferanten + Netzentgelt + Energiesteuer laut deiner Rechnung. Der Standardwert 0,73 stammt von einem Haushalt in Südschweden (Rechnungen Oktober 2026): Ersetze ihn durch deinen. Preis = (Spot + Aufschläge) × 1,25.","Leverantörens rörliga kostnader och påslag + elnät + energiskatt enligt din faktura. Standardvärdet 0,73 kommer från ett hushåll i södra Sverige (fakturor oktober 2026): ersätt det med ditt. Pris = (spot + påslag) × 1,25."],
@@ -518,7 +545,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     noteSanta:["Hyundai Santa Fe PHEV 2025: battery 13.8 kWh gross, about 10.4 kWh usable from the socket (54 km WLTP). The 3.6 kW AC limit and the 15 % hybrid level are confirmed by the owner. Winter consumption is estimated; published sources suggest higher values (see README).","Hyundai Santa Fe PHEV 2025: Batterie 13,8 kWh brutto, etwa 10,4 kWh nutzbar aus der Steckdose (54 km WLTP). Das AC-Limit von 3,6 kW und der Hybrid-Pegel von 15 % sind vom Besitzer bestätigt. Der Winterverbrauch ist geschätzt; veröffentlichte Quellen deuten auf höhere Werte (siehe README).","Hyundai Santa Fe PHEV 2025: batteri 13,8 kWh brutto, cirka 10,4 kWh användbart från uttaget (54 km WLTP). AC-gränsen 3,6 kW och hybridnivån 15 % är bekräftade av ägaren. Vinterförbrukningen är uppskattad; publicerade källor tyder på högre värden (se README)."],
     noteGeneric:["Typical values for this car type. Replace them with your car's data (manual, or measure with the log above).","Typische Werte für diesen Fahrzeugtyp. Ersetze sie durch die Daten deines Autos (Handbuch oder mit dem Protokoll oben messen).","Typiska värden för den här biltypen. Ersätt dem med din bils data (instruktionsbok, eller mät med loggen ovan)."],
     setCommon:["Parking fees, idle fees and detours are not included. Map: © OpenStreetMap contributors.","Parkgebühren, Blockiergebühren und Umwege sind nicht eingerechnet. Karte: © OpenStreetMap-Mitwirkende.","Parkeringsavgifter, blockeringsavgifter och omvägar ingår inte. Karta: © OpenStreetMap-bidragsgivare."],
-    foot:["Data: eurofuelprices.com (petrol, spot prices, chargers), OpenStreetMap, NOBIL, Open Charge Map. The translations may contain mistakes: tell the owner if something reads wrong.","Daten: eurofuelprices.com (Benzin, Spotpreise, Ladepunkte), OpenStreetMap, NOBIL, Open Charge Map. Die Übersetzungen können Fehler enthalten: Sag dem Betreiber Bescheid, wenn etwas falsch klingt.","Data: eurofuelprices.com (bensin, spotpriser, laddare), OpenStreetMap, NOBIL, Open Charge Map. Översättningarna kan innehålla fel: säg till ägaren om något låter fel."],
+    foot:["The translations may contain mistakes: tell the owner if something reads wrong.","Die Übersetzungen können Fehler enthalten: Sag dem Betreiber Bescheid, wenn etwas falsch klingt.","Översättningarna kan innehålla fel: säg till ägaren om något låter fel."],
+    privTitle:["Privacy and disclaimer","Datenschutz und Haftungsausschluss","Integritet och ansvarsfriskrivning"],
+    privText:["No accounts, no cookies, no tracking. Your settings and consumption log stay in this browser on this device (only values that differ from the defaults are stored). Your position is used only on your phone, except the rounded position that goes to open-meteo.com if you switch on the temperature option. The page is hosted on GitHub Pages and loads its map library from cdnjs and its map tiles from OpenStreetMap, so those services see your IP address. Safari can delete website data if you do not visit for a while.","Keine Konten, keine Cookies, kein Tracking. Deine Einstellungen und das Verbrauchsprotokoll bleiben in diesem Browser auf diesem Gerät (gespeichert werden nur Werte, die vom Standard abweichen). Dein Standort wird nur auf deinem Handy verwendet, außer der gerundeten Position, die an open-meteo.com geht, wenn du die Temperaturoption einschaltest. Die Seite liegt auf GitHub Pages und lädt die Kartenbibliothek von cdnjs und die Kartenkacheln von OpenStreetMap; diese Dienste sehen deine IP-Adresse. Safari kann Websitedaten löschen, wenn du länger nicht vorbeischaust.","Inga konton, inga cookies, ingen spårning. Dina inställningar och förbrukningsloggen stannar i den här webbläsaren på den här enheten (bara värden som skiljer sig från standard sparas). Din position används bara på din telefon, förutom den avrundade positionen som skickas till open-meteo.com om du slår på temperaturalternativet. Sidan ligger på GitHub Pages och hämtar kartbiblioteket från cdnjs och kartrutorna från OpenStreetMap, så de tjänsterna ser din IP-adress. Safari kan radera webbplatsdata om du inte besöker sidan på ett tag."],
+    discl:["This page gives an estimate, not advice. Prices, forecasts and charger data can be wrong or out of date; check the price in the charger's app. No liability for decisions based on it.","Diese Seite liefert eine Schätzung, keine Beratung. Preise, Prognosen und Ladedaten können falsch oder veraltet sein; prüfe den Preis in der App des Ladeanbieters. Keine Haftung für Entscheidungen auf dieser Grundlage.","Sidan ger en uppskattning, inte rådgivning. Priser, prognoser och laddardata kan vara fel eller gamla; kontrollera priset i laddoperatörens app. Inget ansvar för beslut som bygger på den."],
+    privContact:["Operator and contact: via eurofuelprices.com. You can complain to IMY (Integritetsskyddsmyndigheten) if you think your data is handled wrongly.","Betreiber und Kontakt: über eurofuelprices.com. Du kannst dich bei der IMY (Integritetsskyddsmyndigheten) beschweren, wenn du meinst, dass deine Daten falsch behandelt werden.","Ansvarig och kontakt: via eurofuelprices.com. Du kan klaga hos IMY (Integritetsskyddsmyndigheten) om du anser att dina uppgifter hanteras fel."],
+    resetAll:["Delete all my saved settings and log","Alle meine gespeicherten Einstellungen und das Protokoll löschen","Radera alla mina sparade inställningar och loggen"],
     warnPetrol:["Petrol {x} SEK/l looks wrong.","Benzin {x} SEK/l sieht falsch aus.","Bensin {x} SEK/l ser fel ut."],
     warnHome:["Home price {x} SEK/kWh looks wrong.","Heimpreis {x} SEK/kWh sieht falsch aus.","Hempris {x} SEK/kWh ser fel ut."],
     warnFees:["The fee default (0.73 SEK/kWh) comes from bills of October 2026 and may be outdated. Enter the fees from your current bill.","Der Standardwert für die Aufschläge (0,73 SEK/kWh) stammt aus Rechnungen vom Oktober 2026 und kann veraltet sein. Gib die Aufschläge deiner aktuellen Rechnung ein.","Standardvärdet för påslagen (0,73 SEK/kWh) kommer från fakturor från oktober 2026 och kan vara gammalt. Ange påslagen från din aktuella faktura."],
@@ -543,6 +575,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     lang:detectLang(), car:"phev", cv:null, soc:20, season:(m0 >= 9 || m0 <= 2) ? "winter" : "summer", useTemp:false,
     hours:1, homeHours:10, homeAmp:0, area:"SE4", contract:"avg",
     home:4.59, homeEdited:false, homeAdd:FEES_DEFAULT, feesEdited:false, petrol:15.80, petrolEdited:false,
+    petrolAt:null, homeAt:null, feesAt:null,
     tomorrow:0, trip:0, perWeek:null, log:[]
   };
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", homeAdd:"feesEdited"};
@@ -563,6 +596,15 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   if(CONTRACTS.indexOf(S.contract) < 0){ S.contract = DEFAULT.contract; }
   S.useTemp = S.useTemp === true;
   S.soc = Math.min(100, Math.max(0, S.soc));
+  // A hand-typed price expires after 7 days and falls back to the live data (the page says so). Older saves without a date get 7 days from now.
+  var EXPIRED = [], TODAY = new Date().toISOString().slice(0, 10);
+  [["petrol", "petrolAt"], ["home", "homeAt"], ["homeAdd", "feesAt"]].forEach(function(p){
+    var f = AUTO[p[0]];
+    if(S[f]){
+      if(typeof S[p[1]] !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(S[p[1]])){ S[p[1]] = TODAY; }
+      else if(Date.now() - Date.parse(S[p[1]]) > PRICE_EXPIRY_DAYS * 864e5){ EXPIRED.push({k:p[0], at:S[p[1]]}); S[f] = false; S[p[1]] = null; }
+    } else { S[p[1]] = null; }
+  });
   Object.keys(AUTO).forEach(function(k){ if(!S[AUTO[k]]){ S[k] = DEFAULT[k]; } });   // follow the default until the user changes it
   S.sel = null;   // the chosen charger is never stored: charger ids only mean something after "Use my location"
   S.temp = null;  // outside temperature, only while it is loaded
@@ -694,7 +736,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     while(i >= 0 && m[i] == null){ i--; }
     if(i < 0){ return null; }
     var typ = function(k){
-      var v = HIST.map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
+      var v = histYears(y).map(function(h){ return a.monthly[h] && a.monthly[h][k]; }).filter(function(x){ return x != null; });
       return v.length ? v.reduce(function(s, x){ return s + x; }, 0) / v.length : null;
     };
     var part = a.partial && a.partial.month === y + "-" + (i < 9 ? "0" : "") + (i + 1);
@@ -716,7 +758,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       var mi = (i + k) % 12, tt = typ(mi);
       if(tt > 0){ list.push({idx:mi, spot:tt * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(tt, add), hi:home(tt * f, add), kk:"kindFc", kp:{}}); }
     }
-    return {months:list.map(function(x){ x.price = home(x.spot, add); return x; }), f:f, i:i};
+    // The shown range always contains the estimate and is never printed upside down (it was, for f < 1).
+    return {months:list.map(function(x){
+      x.price = home(x.spot, add);
+      if(x.lo != null){ var a2 = Math.min(x.lo, x.hi, x.price), b2 = Math.max(x.lo, x.hi, x.price); x.lo = a2; x.hi = b2; }
+      return x;
+    }), f:f, i:i};
   }
   window.__forecast = forecast;
 
@@ -974,8 +1021,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         S.sel = N.ch.length ? N.ch[0].id : null;   // the nearest charger is preselected; tap another on the map or clear it
         var pe = [];
         r[1].stations.forEach(function(s){
-          var l = (s.prices || []).filter(function(q){ return q.octane === 95 && q.price > 12 && q.price < 25; }), p = l.filter(isFresh)[0] || l[0];
-          if(p){ pe.push({name:(s.brand || s.name || "Petrol station") + (s.city ? ", " + s.city : ""), price:p.price, date:p.updated_at ? p.updated_at.slice(0,10) : "", fresh:isFresh(p), dist:hav(la, lo, s.lat, s.lon)}); }
+          var l = (s.prices || []).filter(isCrowd), p = l.filter(function(q){ return isFresh(q); })[0] || l[0];
+          if(p){ pe.push({name:(s.brand || s.name || "Petrol station") + (s.city ? ", " + s.city : ""), price:Math.round((p.price + taxAdd(p.updated_at, Date.now())) * 100) / 100, date:p.updated_at ? p.updated_at.slice(0,10) : "", fresh:isFresh(p), dist:hav(la, lo, s.lat, s.lon)}); }
         });
         N.pe = pe.sort(function(a,b){ return a.dist - b.dist; }).filter(function(p){ return p.dist <= 50; }).slice(0, 5);   // a pump farther than 50 km is not "nearby"
         // Preselect the cheapest dated price; an undated price is chosen only if no dated one is nearby.
@@ -1002,19 +1049,45 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   // Petrol is a daily price and loads automatically: national median of prices dated within the last 3 days
   // (all prices if fewer than 20 are dated). Cached for 6 hours so the 1.3 MB file is not fetched on every open.
   // "Use my location" replaces it with a nearby pump.
-  var FRESH_MS = 3 * 864e5, PCACHE = "wo-laden-petrol-v1";
-  function isFresh(q){ return !!q.updated_at && Date.now() - Date.parse(q.updated_at) < FRESH_MS; }
+  // Rules (docs/RESEARCH_2026-11-18.md 2.3): only crowd prices (ANWB's "95" slot for Sweden is not a usable 95 price); prices outside
+  // max(0.8 SEK, 5 %) of the first median are dropped; the headline is the median of the brand medians (brands with 3+ prices),
+  // so one chain (St1 is ~77 % of the dated prices) cannot decide; tax steps are added to prices stamped before the step.
+  var FRESH_MS = 3 * 864e5, PCACHE = "wo-laden-petrol-v2";
+  function isFresh(q, now){ return !!q.updated_at && (now || Date.now()) - Date.parse(q.updated_at) < FRESH_MS; }
+  function isCrowd(q){ return q.octane === 95 && q.source === "bensinpriser" && q.price > 12 && q.price < 25; }
+  function taxAdd(stamp, now){
+    var ts = stamp ? Date.parse(stamp) : NaN, add = 0;
+    TAXSTEPS.forEach(function(s){ var d = Date.parse(s.from + "T00:00:00+01:00"); if(d <= now && (isNaN(ts) || ts < d)){ add += s.add; } });
+    return add;
+  }
+  function med(v){ v = v.slice().sort(function(a, b){ return a - b; }); var h = v.length >> 1; return v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2; }
+  // stations = se.json stations. Returns {price, n, brands, fresh, est} or null. est = a tax step was added to at least one price.
+  function petrolMedian(stations, now){
+    var all = [], fr = [];
+    stations.forEach(function(s){ (s.prices || []).forEach(function(q){
+      if(!isCrowd(q)){ return; }
+      var add = taxAdd(q.updated_at, now), r = {b:s.brand || s.name || "?", p:q.price + add, adj:add > 0};
+      all.push(r); if(isFresh(q, now)){ fr.push(r); }
+    }); });
+    var set = fr.length >= 20 ? fr : all;
+    if(!set.length){ return null; }
+    var m0 = med(set.map(function(r){ return r.p; })), tol = Math.max(0.8, 0.05 * m0);
+    var kept = set.filter(function(r){ return Math.abs(r.p - m0) <= tol; });
+    var by = {}; kept.forEach(function(r){ (by[r.b] = by[r.b] || []).push(r.p); });
+    var bm = Object.keys(by).filter(function(b){ return by[b].length >= 3; }).map(function(b){ return med(by[b]); });
+    var price = bm.length >= 3 ? med(bm) : med(kept.map(function(r){ return r.p; }));
+    return {price:Math.round(price * 100) / 100, n:kept.length, brands:bm.length, fresh:set === fr, est:kept.some(function(r){ return r.adj; })};
+  }
+  window.__petrol = petrolMedian;
   function useMedian(m){ N.med = m; if(!S.petrolEdited && N.pick < 0){ S.petrol = m.price; } syncInputs(); update(); }
   function loadPetrol(){
-    try{ var c = JSON.parse(localStorage.getItem(PCACHE)); if(c && c.m && Date.now() - c.at < 6 * 36e5){ useMedian(c.m); return; } }catch(e){}
+    var step = TAXSTEPS.filter(function(s){ return Date.parse(s.from) <= Date.now(); }).length;
+    try{ var c = JSON.parse(localStorage.getItem(PCACHE)); if(c && c.m && c.step === step && Date.now() - c.at < 6 * 36e5){ useMedian(c.m); return; } }catch(e){}
     getSE().then(function(j){
-      var all = [], fr = [];
-      j.stations.forEach(function(s){ (s.prices || []).forEach(function(q){ if(q.octane === 95 && q.price > 12 && q.price < 25){ all.push(q.price); if(isFresh(q)){ fr.push(q.price); } } }); });
-      var v = fr.length >= 20 ? fr : all;
-      if(!v.length){ throw 0; }
-      v.sort(function(a, b){ return a - b; });
-      var m = {price:Math.round(v[v.length >> 1] * 100) / 100, n:v.length, fresh:v === fr, date:String(j.meta.newest_price_at || "").slice(0, 10)};
-      try{ localStorage.setItem(PCACHE, JSON.stringify({at:Date.now(), m:m})); }catch(e){}
+      var m = petrolMedian(j.stations, Date.now());
+      if(!m){ throw 0; }
+      m.date = String(j.meta.newest_price_at || "").slice(0, 10);
+      try{ localStorage.setItem(PCACHE, JSON.stringify({at:Date.now(), step:step, m:m})); }catch(e){}
       useMedian(m);
     }).catch(function(){ N.petrolErr = true; update(); });
   }
@@ -1107,8 +1180,12 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     else if(!S.petrolEdited && N.med){ tx = t(N.med.fresh ? "petSrcFresh" : "petSrcOld", {n:N.med.n, newest:newest}); }
     else if(!S.petrolEdited && N.petrolErr){ tx = t("petSrcErr", {x:fmt(DEFAULT.petrol)}); }
     else { tx = t("petSrcHand"); }
+    if(!S.petrolEdited && N.med && N.med.est && !(p && Math.abs(p.price - S.petrol) < 0.005)){ tx += t("petTaxEst", {x:fmt(TAXSTEPS.filter(function(s){ return Date.parse(s.from) <= Date.now(); }).reduce(function(a, s){ return a + s.add; }, 0))}); }
     $("petrolsrc").textContent = tx;
     var w = [];
+    var nowT = Date.now(), up = TAXSTEPS.filter(function(s){ var d = Date.parse(s.from + "T00:00:00+01:00"); return d > nowT && d - nowT <= 11 * 864e5; })[0];
+    if(up){ w.push(t("warnTax", {x:fmt(up.add, up.add < 1 ? 3 : 2), d:up.from})); }
+    EXPIRED.forEach(function(e){ w.push(t("priceExpired", {what:t(e.k === "petrol" ? "expPetrol" : e.k === "home" ? "expHome" : "expFees"), d:e.at})); });
     if(S.petrol < 8 || S.petrol > 30){ w.push(t("warnPetrol", {x:fmt(S.petrol)})); }
     if(S.home > 15){ w.push(t("warnHome", {x:fmt(S.home)})); }
     if(!S.feesEdited && S.contract !== "fixed" && new Date() > new Date(FEES_VALID_TO + "T23:59:59")){ w.push(t("warnFees")); }
@@ -1137,9 +1214,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   // ---- wiring ----
   function bindNum(id, fn){ $(id).addEventListener("input", function(e){ fn(num(e.target.value, null)); save(); update(); }); }
-  bindNum("petrol", function(v){ if(v != null){ S.petrol = Math.max(0, v); S.petrolEdited = true; N.pick = -1; } });
-  bindNum("home", function(v){ if(v != null){ S.home = Math.max(0, v); S.homeEdited = true; } });
-  bindNum("fees", function(v){ if(v != null){ S.homeAdd = Math.max(0, v); S.feesEdited = true; if(N.el){ applySpot(); } } });
+  bindNum("petrol", function(v){ if(v != null){ S.petrol = Math.max(0, v); S.petrolEdited = true; S.petrolAt = TODAY; N.pick = -1; } });
+  bindNum("home", function(v){ if(v != null){ S.home = Math.max(0, v); S.homeEdited = true; S.homeAt = TODAY; } });
+  bindNum("fees", function(v){ if(v != null){ S.homeAdd = Math.max(0, v); S.feesEdited = true; S.feesAt = TODAY; if(N.el){ applySpot(); } } });
   $("hours").addEventListener("input", function(e){ S.hours = num(e.target.value, 1); save(); update(); });
   $("homehours").addEventListener("input", function(e){ S.homeHours = num(e.target.value, 10); save(); update(); });
   $("soc").addEventListener("input", function(e){ S.soc = parseInt(e.target.value, 10); save(); update(); });
@@ -1150,6 +1227,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     $("cv" + k).addEventListener("input", function(e){ var v = num(e.target.value, null); if(v != null){ S.cv[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], v)); save(); update(); } });
   });
   $("car").addEventListener("change", function(e){ S.car = e.target.value; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); });
+  $("resetall").addEventListener("click", function(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(PCACHE); }catch(e){} location.reload(); });
   $("cvreset").addEventListener("click", function(){ S.cv = Object.assign({}, PRESETS[S.car].v); save(); syncInputs(); update(); });
   $("sWinter").addEventListener("click", function(){ S.season = "winter"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
   $("sSummer").addEventListener("click", function(){ S.season = "summer"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });

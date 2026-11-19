@@ -165,6 +165,28 @@ document.querySelector("iframe").onload = function () {
   eq("year: 5 x 26 x 2 full charges of 10.4 kWh", yr.kwh, 2704, 1);
   eq("year: saving in SEK", yr.sek, 3388, 5);
 
+  // --- petrol: crowd only, brand median, plausibility band, tax step ---
+  var pm = W.__petrol, T0 = Date.parse("2026-11-18T12:00:00Z"), stamp = "2026-11-17T15:00:00+00:00";
+  function stn(brand, price, src, at) { return {brand: brand, prices: [{octane: 95, price: price, source: src || "bensinpriser", updated_at: at === undefined ? stamp : at}]}; }
+  function crowdN(brand, price, n, src) { var a = []; for (var i = 0; i < n; i++) { a.push(stn(brand, price, src)); } return a; }
+  var base = crowdN("St1", 15.29, 30).concat(crowdN("OKQ8", 15.9, 4), crowdN("Circle K", 16.0, 4), crowdN("Preem", 15.8, 4));
+  eq("one chain cannot decide: median of the brand medians", pm(base, T0).price, 15.85);
+  eq("ANWB prices are ignored", pm(base.concat(crowdN("Shell", 17.2, 100, "anwb")), T0).price, 15.85);
+  eq("outlier outside the band is dropped", pm(base.concat([stn("Shell", 25, "bensinpriser")]), T0).n, 42);
+  yes("no crowd price: null", pm(crowdN("X", 15, 5, "anwb"), T0) === null);
+  var T1 = Date.parse("2026-12-01T12:00:00Z");
+  eq("tax step added to a price stamped before it", pm(base, T1).price, 18.85);
+  yes("... and marked as estimate", pm(base, T1).est === true && pm(base, T0).est === false);
+  eq("a price stamped after the step is not raised", pm(crowdN("St1", 18.3, 30).map(function (s) { s.prices[0].updated_at = "2026-12-01T10:00:00+00:00"; return s; }), T1).price, 18.3);
+  eq("2027 step adds 0.125 more", pm(base, Date.parse("2027-01-02T12:00:00Z")).price, 18.975, 0.01);
+
+  // --- forecast: range is never upside down and contains the estimate; typical = 3 full years, no 2022 ---
+  var fc = W.__forecast, mon = {"2023": [1,1,1,1,1,1,1,1,1,1,1,1], "2024": [1,1,1,1,1,1,1,1,1,1,1,1], "2025": [1,1,1,1,1,1,1,1,1,1,1,1], "2026": [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]};
+  var fr = fc({monthly: mon, partial: {month: "2026-11", days: 10}}, 2026, 0.7);
+  yes("range ordered and contains the estimate", fr.months.every(function (m) { return m.lo == null || (m.lo <= m.hi && m.lo <= m.price + 1e-9 && m.price <= m.hi + 1e-9); }));
+  var mon2 = {"2022": mon["2023"].map(function () { return 9; }), "2023": mon["2023"], "2024": mon["2024"], "2025": mon["2025"], "2026": [1]};
+  eq("2022 is not in the typical", fc({monthly: mon2}, 2026, 0).months[2].spot, 1);
+
   // --- texts: every key has all three languages, the same placeholders, and every key used in the page exists ---
   var TX = W.__tx, bad = [];
   Object.keys(TX).forEach(function (k) {
