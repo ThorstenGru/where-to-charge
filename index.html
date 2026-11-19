@@ -606,6 +606,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     modelNone:["Generic profile (typical values)","Generisches Profil (typische Werte)","Generisk profil (typiska värden)"],
     modelHint:["Pick your model to use its battery and charging data. Everything stays editable below.","Wähle dein Modell, um seine Batterie- und Ladedaten zu nutzen. Alles bleibt unten änderbar.","Välj din modell för att använda dess batteri- och laddningsdata. Allt kan fortfarande ändras nedan."],
     modelSrc:["Values: {src} (confidence {conf}); battery {usable} kWh from the socket, AC {kw} kW. Consumption is an estimate from the WLTP range: measure yours with the log.","Werte: {src} (Verlässlichkeit {conf}); Batterie {usable} kWh ab Steckdose, AC {kw} kW. Der Verbrauch ist eine Schätzung aus der WLTP-Reichweite: Miss deinen mit dem Protokoll.","Värden: {src} (tillförlitlighet {conf}); batteri {usable} kWh från uttaget, AC {kw} kW. Förbrukningen är en uppskattning från WLTP-räckvidden: mät din med loggen."],
+    colDc:["Fast DC {x} kW","Schnelllader DC {x} kW","Snabbladdare DC {x} kW"],
     closeBig:["Close call","Knapp","Jämnt"],
     closeActHome:["Charging at home still saves {x} SEK/kWh, but only just. Charge if it suits you; hybrid mode costs almost the same.","Zuhause laden spart noch {x} SEK/kWh, aber nur knapp. Lade, wenn es dir passt; der Hybridmodus kostet fast dasselbe.","Att ladda hemma sparar fortfarande {x} SEK/kWh, men bara knappt. Ladda om det passar; hybridläge kostar nästan lika mycket."],
     closeActHev:["Charging at home would save only {x} SEK/kWh. Hybrid mode is almost as good; charge if you like.","Zuhause laden würde nur {x} SEK/kWh sparen. Der Hybridmodus ist fast genauso gut; lade, wenn du magst.","Att ladda hemma skulle bara spara {x} SEK/kWh. Hybridläge är nästan lika bra; ladda om du vill."],
@@ -777,8 +778,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       road = {name:ch.name, op:ch.op, pw:pw, kwh:kwh, km:kwh * per, litres:kwh * lPerKwh, saved:kwh * value};
     }
     // km on electricity after `hours` at a charger of `power` kW (the car's own limit applies), and hours for a full charge
-    var at = function(hours, power){ var k = Math.min(free, hours * Math.min(kw, power)); return {kwh:k, km:k * per, full:k >= free - 1e-9}; };
-    var fillH = function(power){ return free / Math.min(kw, power); };
+    var at = function(hours, power, dc){ var k = Math.min(free, hours * (dc ? power : Math.min(kw, power))); return {kwh:k, km:k * per, full:k >= free - 1e-9}; };
+    var fillH = function(power, dc){ return free / (dc ? power : Math.min(kw, power)); };
     return {petrolPrice:st.petrol, noHome:!!st.noHome, home:h, road:road, value:value, limit:value - MIN_GAIN, lPerKwh:lPerKwh, per:per, free:free, cons:se, type:ptype(st), usable:cv.usable, hold:cv.hold, kw:kw, at:at, fillH:fillH};
   }
   window.__state = function(){ return S; }; window.__saveOk = function(){ return SAVE_OK; };
@@ -972,18 +973,20 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   function renderTime(c){
     var cols = AMPS.map(function(a){ return {t:a + " A", p:a * MAINS_V / 1000, home:S.homeAmp === a}; });
     cols.push({t:t("colStation"), p:c.kw, home:false});
+    // Electric car: two fast-charging columns (average power over 10-80 %, see chargePw), a rough estimate
+    if(c.type === "bev"){ [50, 150].forEach(function(x){ cols.push({t:t("colDc", {x:x}), p:Math.min(S.dcPeak || (PRESETS[S.car] && PRESETS[S.car].dc) || 100, x) * DC_AVG, home:false, dc:true}); }); }
     var rows = TIMES.slice();
     [S.hours, S.homeHours].forEach(function(x){ if(rows.indexOf(x) < 0){ rows.push(x); } });
     rows.sort(function(a, b){ return a - b; });
-    var out = '<tr><th>' + t("colTime") + '</th>' + cols.map(function(k){ return '<th>' + k.t + (k.home ? ' ' + t("tagHome") : '') + '<br><span class="small">' + fmt(Math.min(c.kw, k.p), 1) + ' kW</span></th>'; }).join('') + '</tr>';
+    var out = '<tr><th>' + t("colTime") + '</th>' + cols.map(function(k){ return '<th>' + k.t + (k.home ? ' ' + t("tagHome") : '') + '<br><span class="small">' + (k.dc ? "&asymp; " + fmt(k.p, 0) : fmt(Math.min(c.kw, k.p), 1)) + ' kW</span></th>'; }).join('') + '</tr>';
     rows.forEach(function(h){
       var tag = (c.road && h === S.hours ? t("tagRoad") : "") + (h === S.homeHours ? t("tagAtHome") : "");
       out += '<tr><td>' + fmt(h, h % 1 ? 1 : 0) + ' h<span class="small">' + tag + '</span></td>' + cols.map(function(k){
-        var r = c.at(h, k.p);
+        var r = c.at(h, k.p, k.dc);
         return '<td>' + (r.full ? t("fullWord") + '<br>' : '') + fmt(r.km, 0) + ' km<br><span class="small">' + fmt(r.kwh, 1) + ' kWh</span></td>';
       }).join('') + '</tr>';
     });
-    out += '<tr><td><b>' + t("fullCharge") + '</b></td>' + cols.map(function(k){ return '<td>' + fmt(c.fillH(k.p), 1) + ' h<br><span class="small">' + fmt(c.free * c.per, 0) + ' km</span></td>'; }).join('') + '</tr>';
+    out += '<tr><td><b>' + t("fullCharge") + '</b></td>' + cols.map(function(k){ return '<td>' + fmt(c.fillH(k.p, k.dc), 1) + ' h<br><span class="small">' + fmt(c.free * c.per, 0) + ' km</span></td>'; }).join('') + '</tr>';
     $("timetab").innerHTML = out;
     $("fillnote").textContent = t("fillNote", {kwh:fmt(c.free, 1), km:fmt(c.free * c.per, 0), kw:fmt(c.kw, 1)});
   }

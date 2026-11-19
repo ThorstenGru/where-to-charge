@@ -194,6 +194,12 @@ document.querySelector("iframe").onload = function () {
   eq("AC charger of the same car is still limited by the car's 11 kW", calc(mk({petrol: 15, home: 2, soc: 30, hours: 1}, "bev"), {id: "a1", name: "A", op: "", kw: 22}).road.pw, 11);
   yes("small BEV peaks lower than a large one", P.bev_s.dc < P.bev.dc && P.bev.dc < P.bev_l.dc);
 
+  // --- time table helper: fast charging bypasses the car's AC limit ---
+  var tcc = calc(mk({petrol: 15, home: 2, soc: 30}, "bev"), null);
+  eq("AC: 22 kW is limited by the car's 11 kW", tcc.at(1, 22).kwh, 11);
+  eq("DC column: 33 kW average for one hour is not capped to the AC limit", tcc.at(1, 33, true).kwh, 33);
+  eq("DC full charge time uses the DC power", tcc.fillH(33, true), tcc.free / 33, 0.001);
+
   // --- petrol: crowd only, brand median, plausibility band, tax step ---
   var pm = W.__petrol, T0 = Date.parse("2026-11-18T12:00:00Z"), stamp = "2026-11-17T15:00:00+00:00";
   function stn(brand, price, src, at) { return {brand: brand, prices: [{octane: 95, price: price, source: src || "bensinpriser", updated_at: at === undefined ? stamp : at}]}; }
