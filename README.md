@@ -7,7 +7,7 @@ A phone web page for everyone who drives electrically instead of on petrol. **Pr
 Languages: English, Deutsch, Svenska (switch top right; the browser language is the default, `?lang=de` forces one). The translations were written without a native review: please report mistakes. Coverage today: **Sweden** (petrol prices, electricity price areas SE1-SE4, Type 2 AC chargers).
 
 ## Files
-- `index.html`: the whole app (HTML, CSS, JS inline, no build; the only library is Leaflet from cdnjs with an integrity hash).
+- `index.html`: the whole app (HTML, CSS, JS inline, no build; the only library is Leaflet 1.9.4, kept in `vendor/leaflet-1.9.4/` with its licence and an integrity hash; no third-party script host).
 - `manifest.json`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`: install as a home-screen app. No service worker (the page needs live data anyway).
 - `tests/calc.test.html`: about 100 checks (calculation, car types, recommendation, charger list, price months, hourly prices, log, tomorrow, year, texts in three languages). Open it over http (`python -m http.server`, then `/tests/calc.test.html`, or the same path on the Pages URL). The title says PASS or FAIL.
 - `.github/workflows/tests.yml`: runs the test page in headless Chrome on every push and fails when it does not say ALL PASSED (it reports only; Pages deploys from `main` regardless).
