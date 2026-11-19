@@ -314,7 +314,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   var TAXSTEPS = [{from:"2026-12-01", add:3.00}, {from:"2027-01-01", add:0.125}];
   var PETROL_ESTIMATE_DAYS = 3, PRICE_EXPIRY_DAYS = 7;   // an adjusted price counts as estimate for 3 days; hand-typed prices expire after 7
   var FEES_VALID_TO = "2026-12-31";   // fees usually change on 1 January: warn after this date while the default is untouched
-  var DECAY = 0.7;
+  var REGIME_F = 1.5;   // last 3 months more than 1.5x the typical level = regime change, estimates are unreliable
   // "Typical" = the same month in the last three full years, never 2022 (the crisis year pushed every estimate up by about 10 %).
   function histYears(y){ return [y - 3, y - 2, y - 1].filter(function(h){ return h >= 2023; }).map(String); }
   var BASE = "https://eurofuelprices.com/";
@@ -463,7 +463,8 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     kindMonth:["calculated from the spot average","aus dem Spotmittel berechnet","beräknad från spotmedel"],
     kindEst:["estimated ({d} of {n} days known, avg so far {a})","geschätzt ({d} von {n} Tagen bekannt, bisher Mittel {a})","uppskattad ({d} av {n} dagar kända, hittills medel {a})"],
     kindFc:["estimate","Schätzung","uppskattning"],
-    monthNote:["Estimates are a rule of thumb, not a market forecast: the typical level of that month in 2023-2025, raised by how much higher the last 3 months were (now {f}x), with that excess fading by 30 % per month. The range runs from “back to normal” to “stays as high as now”. Spot = monthly average of your price area, excl. VAT.","Die Schätzungen sind eine Faustregel, keine Marktprognose: das typische Niveau des Monats 2023–2025, erhöht um den Faktor, um den die letzten 3 Monate darüber lagen (jetzt {f}x); dieser Überschuss schwindet um 30 % pro Monat. Die Spanne reicht von „zurück zur Normalität“ bis „bleibt so hoch wie jetzt“. Spot = Monatsmittel deines Preisgebiets, ohne MwSt.","Uppskattningarna är tumregler, inga marknadsprognoser: månadens typiska nivå 2023–2025, höjd med hur mycket högre de senaste 3 månaderna var (nu {f}x), där överskottet avtar med 30 % per månad. Spannet går från ”tillbaka till normalt” till ”förblir lika högt som nu”. Spot = månadsmedel för ditt prisområde, exkl. moms."],
+    monthNote:["Estimates are a rule of thumb, not a market forecast: the average of the last 3 months, adjusted for the usual season, in all-in price. Typically about 10 % off, rarely more than 35 %; the range shows ±20 % (±30 % in winter). The current month is the average of the days known so far. Spot = monthly average of your price area, excl. VAT.","Die Schätzungen sind eine Faustregel, keine Marktprognose: der Durchschnitt der letzten 3 Monate, an die übliche Saison angepasst, als Gesamtpreis. Typisch etwa 10 % daneben, selten mehr als 35 %; die Spanne zeigt ±20 % (±30 % im Winter). Der laufende Monat ist der Durchschnitt der bisher bekannten Tage. Spot = Monatsmittel deines Preisgebiets, ohne MwSt.","Uppskattningarna är tumregler, inga marknadsprognoser: genomsnittet av de senaste 3 månaderna, anpassat till vanlig säsong, som totalpris. Vanligtvis ca 10 % fel, sällan mer än 35 %; spannet visar ±20 % (±30 % på vintern). Innevarande månad är genomsnittet av de dagar som hittills är kända. Spot = månadsmedel för ditt prisområde, exkl. moms."],
+    regimeWarn:["Unusually high price level (the last 3 months were {f}x the typical level). The estimates for coming months are especially uncertain and may be too low: forward prices for this winter are higher. See boio.se or the weekly report “Läget på elmarknaden” from Ei for forward prices.","Ungewöhnlich hohes Preisniveau (die letzten 3 Monate lagen beim {f}-Fachen des Üblichen). Die Schätzungen für kommende Monate sind besonders unsicher und können zu niedrig sein: Die Terminpreise für diesen Winter sind höher. Terminpreise: boio.se oder der Wochenbericht „Läget på elmarknaden“ der Ei.","Ovanligt hög prisnivå (de senaste 3 månaderna låg på {f} gånger den vanliga nivån). Uppskattningarna för kommande månader är extra osäkra och kan vara för låga: terminspriserna för vintern är högre. Terminspriser: boio.se eller Eis veckorapport ”Läget på elmarknaden”."],
     spotNo:["No current spot data. The home price is the built-in default ({x} SEK/kWh, based on October). Enter your own price.","Keine aktuellen Spotpreise. Der Heimpreis ist der eingebaute Standardwert ({x} SEK/kWh, Stand Oktober). Gib deinen eigenen Preis ein.","Inga aktuella spotpriser. Hempriset är det inbyggda standardvärdet ({x} SEK/kWh, baserat på oktober). Ange ditt eget pris."],
     homeHoursLabel:["Time parked at home (connected to the charger)","Standzeit zuhause (am Ladegerät angeschlossen)","Tid parkerad hemma (ansluten till laddaren)"],
     ampLabel:["Home charger: household socket (fuse setting of the cable) or wallbox","Heimlader: Haushaltssteckdose (Stromstärke des Kabels) oder Wallbox","Hemmaladdare: vanligt uttag (kabelns strömstyrka) eller laddbox"],
@@ -550,6 +551,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     privText:["No accounts, no cookies, no tracking. Your settings and consumption log stay in this browser on this device (only values that differ from the defaults are stored). Your position is used only on your phone, except the rounded position that goes to open-meteo.com if you switch on the temperature option. The page is hosted on GitHub Pages and loads its map library from cdnjs and its map tiles from OpenStreetMap, so those services see your IP address. Safari can delete website data if you do not visit for a while.","Keine Konten, keine Cookies, kein Tracking. Deine Einstellungen und das Verbrauchsprotokoll bleiben in diesem Browser auf diesem Gerät (gespeichert werden nur Werte, die vom Standard abweichen). Dein Standort wird nur auf deinem Handy verwendet, außer der gerundeten Position, die an open-meteo.com geht, wenn du die Temperaturoption einschaltest. Die Seite liegt auf GitHub Pages und lädt die Kartenbibliothek von cdnjs und die Kartenkacheln von OpenStreetMap; diese Dienste sehen deine IP-Adresse. Safari kann Websitedaten löschen, wenn du länger nicht vorbeischaust.","Inga konton, inga cookies, ingen spårning. Dina inställningar och förbrukningsloggen stannar i den här webbläsaren på den här enheten (bara värden som skiljer sig från standard sparas). Din position används bara på din telefon, förutom den avrundade positionen som skickas till open-meteo.com om du slår på temperaturalternativet. Sidan ligger på GitHub Pages och hämtar kartbiblioteket från cdnjs och kartrutorna från OpenStreetMap, så de tjänsterna ser din IP-adress. Safari kan radera webbplatsdata om du inte besöker sidan på ett tag."],
     discl:["This page gives an estimate, not advice. Prices, forecasts and charger data can be wrong or out of date; check the price in the charger's app. No liability for decisions based on it.","Diese Seite liefert eine Schätzung, keine Beratung. Preise, Prognosen und Ladedaten können falsch oder veraltet sein; prüfe den Preis in der App des Ladeanbieters. Keine Haftung für Entscheidungen auf dieser Grundlage.","Sidan ger en uppskattning, inte rådgivning. Priser, prognoser och laddardata kan vara fel eller gamla; kontrollera priset i laddoperatörens app. Inget ansvar för beslut som bygger på den."],
     privContact:["Operator and contact: via eurofuelprices.com. You can complain to IMY (Integritetsskyddsmyndigheten) if you think your data is handled wrongly.","Betreiber und Kontakt: über eurofuelprices.com. Du kannst dich bei der IMY (Integritetsskyddsmyndigheten) beschweren, wenn du meinst, dass deine Daten falsch behandelt werden.","Ansvarig och kontakt: via eurofuelprices.com. Du kan klaga hos IMY (Integritetsskyddsmyndigheten) om du anser att dina uppgifter hanteras fel."],
+    saveFail:["Your settings cannot be saved in this browser (private mode or blocked storage). They are lost when you close the page.","Deine Einstellungen können in diesem Browser nicht gespeichert werden (privater Modus oder gesperrter Speicher). Sie gehen beim Schließen der Seite verloren.","Dina inställningar kan inte sparas i den här webbläsaren (privat läge eller blockerad lagring). De försvinner när du stänger sidan."],
     resetAll:["Delete all my saved settings and log","Alle meine gespeicherten Einstellungen und das Protokoll löschen","Radera alla mina sparade inställningar och loggen"],
     warnPetrol:["Petrol {x} SEK/l looks wrong.","Benzin {x} SEK/l sieht falsch aus.","Bensin {x} SEK/l ser fel ut."],
     warnHome:["Home price {x} SEK/kWh looks wrong.","Heimpreis {x} SEK/kWh sieht falsch aus.","Hempris {x} SEK/kWh ser fel ut."],
@@ -569,29 +571,44 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
   // ---- language, state ----
   var Q = (typeof URLSearchParams !== "undefined") ? new URLSearchParams(location.search).get("lang") : null;
-  function detectLang(){ var q = Q || (navigator.language || "en").slice(0, 2); return LANGS.indexOf(q) >= 0 ? q : "en"; }
+  function detectBrowserLang(){ var q = (navigator.language || "en").slice(0, 2); return LANGS.indexOf(q) >= 0 ? q : "en"; }
   var m0 = new Date().getMonth();
   var DEFAULT = {
-    lang:detectLang(), car:"phev", cv:null, soc:20, season:(m0 >= 9 || m0 <= 2) ? "winter" : "summer", useTemp:false,
+    lang:detectBrowserLang(), car:"phev", cv:null, soc:20, season:(m0 >= 9 || m0 <= 2) ? "winter" : "summer", useTemp:false,
     hours:1, homeHours:10, homeAmp:0, area:"SE4", contract:"avg",
     home:4.59, homeEdited:false, homeAdd:FEES_DEFAULT, feesEdited:false, petrol:15.80, petrolEdited:false,
-    petrolAt:null, homeAt:null, feesAt:null,
+    petrolAt:null, homeAt:null, feesAt:null, seasonAt:null,
     tomorrow:0, trip:0, perWeek:null, log:[]
   };
   var AUTO = {petrol:"petrolEdited", home:"homeEdited", homeAdd:"feesEdited"};
   var S = JSON.parse(JSON.stringify(DEFAULT));
-  try{ var raw = localStorage.getItem(KEY); if(raw){ Object.assign(S, JSON.parse(raw)); } }catch(e){}
+  // Only known keys are taken over (no __proto__ or foreign keys). A damaged value is kept under KEY + "-bad" before anything overwrites it.
+  var STORED = {}, SAVE_OK = true, LASTW = null;   // LASTW = what this tab wrote last
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){
+      try{ var o = JSON.parse(raw); if(o && typeof o === "object" && !Array.isArray(o)){ Object.keys(DEFAULT).forEach(function(k){ if(Object.prototype.hasOwnProperty.call(o, k)){ STORED[k] = o[k]; } }); } else { throw 0; } }
+      catch(e){ localStorage.setItem(KEY + "-bad", raw); }
+      Object.assign(S, STORED);
+    }
+  }catch(e){}
+  var LANG_SAVED = LANGS.indexOf(S.lang) >= 0 ? S.lang : DEFAULT.lang;   // what the user chose; ?lang= below never replaces it
   function isNum(x){ return typeof x === "number" && isFinite(x); }
   if(LANGS.indexOf(S.lang) < 0){ S.lang = DEFAULT.lang; }
-  if(Q && LANGS.indexOf(Q) >= 0){ S.lang = Q; }   // ?lang=de for links and tests, never stored
-  if(!PRESETS[S.car]){ S.car = DEFAULT.car; }
+  if(Q && LANGS.indexOf(Q) >= 0){ S.lang = Q; }   // ?lang=de for links and tests: shown, never stored
+  if(!PRESETS[S.car]){ S.car = DEFAULT.car; S.cv = null; }
   // One odd stored value must never break the page: anything that is not a finite number falls back to the default.
   ["petrol", "home", "homeAdd", "soc", "hours", "homeHours", "homeAmp", "tomorrow", "trip"].forEach(function(k){ if(!isNum(S[k])){ S[k] = DEFAULT[k]; } });
   S.cv = Object.assign({}, PRESETS[S.car].v, (S.cv && typeof S.cv === "object") ? S.cv : {});
   CVKEYS.forEach(function(k){ if(!isNum(S.cv[k])){ S.cv[k] = PRESETS[S.car].v[k]; } });
   var LIM = {usable:[1, 200], kw:[1, 50], hold:[0, 60], elS:[5, 80], elW:[5, 80], lS:[1, 30], lW:[1, 30]};
   CVKEYS.forEach(function(k){ S.cv[k] = Math.min(LIM[k][1], Math.max(LIM[k][0], S.cv[k])); });
-  if(S.season !== "winter" && S.season !== "summer"){ S.season = DEFAULT.season; }
+  // The season follows the calendar; a manual choice is an override that lasts 7 days (it used to stick for ever or flip silently).
+  if(S.season !== "winter" && S.season !== "summer"){ S.season = DEFAULT.season; S.seasonAt = null; }
+  if(S.season !== DEFAULT.season){
+    if(typeof S.seasonAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(S.seasonAt)){ S.seasonAt = new Date().toISOString().slice(0, 10); }
+    else if(Date.now() - Date.parse(S.seasonAt) > 7 * 864e5){ S.season = DEFAULT.season; S.seasonAt = null; }
+  } else { S.seasonAt = null; }
   if(AREAS.indexOf(S.area) < 0){ S.area = DEFAULT.area; }
   if(CONTRACTS.indexOf(S.contract) < 0){ S.contract = DEFAULT.contract; }
   S.useTemp = S.useTemp === true;
@@ -637,12 +654,20 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       var d = {};
       Object.keys(DEFAULT).forEach(function(k){
         if(AUTO[k] && !S[AUTO[k]]){ return; }
-        var def = k === "cv" ? PRESETS[S.car].v : DEFAULT[k];
-        if(JSON.stringify(S[k]) !== JSON.stringify(def)){ d[k] = S[k]; }
+        var v = k === "lang" ? LANG_SAVED : S[k], def = DEFAULT[k];
+        if(k === "cv"){   // per value: only what differs from the car preset, so later preset corrections still reach the user
+          var pv = PRESETS[S.car].v, o = {}; CVKEYS.forEach(function(c){ if(S.cv[c] !== pv[c]){ o[c] = S.cv[c]; } });
+          if(Object.keys(o).length){ d.cv = o; }
+          return;
+        }
+        if(JSON.stringify(v) !== JSON.stringify(def)){ d[k] = v; }
       });
-      if(Object.keys(d).length){ localStorage.setItem(KEY, JSON.stringify(d)); } else { localStorage.removeItem(KEY); }
-    }catch(e){}
+      if(Object.keys(d).length){ LASTW = JSON.stringify(d); localStorage.setItem(KEY, LASTW); if(localStorage.getItem(KEY) !== LASTW){ throw 0; } } else { LASTW = null; localStorage.removeItem(KEY); }
+      SAVE_OK = true;
+    }catch(e){ SAVE_OK = false; }
   }
+  // Another tab changed the settings: reload instead of overwriting them with this tab's old copy.
+  window.addEventListener("storage", function(e){ if(e.key === KEY && e.newValue !== LASTW){ location.reload(); } });
   function home(spot, add){ return (spot + add) * VAT; }
   function selCharger(){ return N.ch.filter(function(c){ return c.id === S.sel; })[0] || null; }
 
@@ -675,6 +700,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     var fillH = function(power){ return free / Math.min(kw, power); };
     return {home:h, road:road, value:value, limit:value - MIN_GAIN, lPerKwh:lPerKwh, per:per, free:free, cons:se, type:ptype(st), usable:cv.usable, hold:cv.hold, kw:kw, at:at, fillH:fillH};
   }
+  window.__state = function(){ return S; }; window.__saveOk = function(){ return SAVE_OK; };
   window.__calc = calc; window.__consumption = consumption; window.__presets = PRESETS;
 
   // The recommendation as plain data. c = result of calc(), hours = parking time.
@@ -744,26 +770,31 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     for(k = i - 2; k <= i; k++){ var v = k >= 0 ? m[k] : prev[k + 12], tk = typ((k + 12) % 12); if(v != null && tk > 0){ rat.push(v / tk); } }
     if(!rat.length){ return null; }
     var f = Math.min(5, rat.reduce(function(s, x){ return s + x; }, 0) / rat.length);   // capped so one odd month cannot blow up the estimate
+    // SD3 (best of the rules tested in docs/RESEARCH_2026-11-18.md 2.2): mean of the last 3 COMPLETE months, times
+    // (typical of the target month / typical of those 3 months) ^ 0.5. Band on the all-in price: +-20 % (+-30 % for Nov-Mar).
+    // The current month is the mean of the days known so far (blended 50/50 with last month in the first 5 days), band +-12 % / +-6 %.
     var list = [], lastV = i >= 1 ? m[i - 1] : prev[11];
     if(lastV != null){ list.push({idx:(i + 11) % 12, spot:lastV, kk:"kindLast", kp:{}}); }
-    var tc = typ(i);
-    if(part && tc > 0){
-      // The bill uses the whole-month average: known days + estimate for the rest of the month.
-      var dim = new Date(y, i + 1, 0).getDate(), w = a.partial.days / dim, rest = tc * (1 + (f - 1) * DECAY);
-      list.push({idx:i, spot:w * m[i] + (1 - w) * rest, lo:home(w * m[i] + (1 - w) * tc, add), hi:home(m[i], add), kk:"kindEst", kp:{d:a.partial.days, n:dim, a:m[i]}});
+    var e = part ? i - 1 : i, last3 = [], tavg = [];
+    for(k = e - 2; k <= e; k++){ var vv = k >= 0 ? m[k] : prev[k + 12], tq = typ((k + 12) % 12); if(vv != null && tq > 0){ last3.push(vv); tavg.push(tq); } }
+    var mean3 = last3.length ? last3.reduce(function(s, x){ return s + x; }, 0) / last3.length : null;
+    var tbar = tavg.length ? tavg.reduce(function(s, x){ return s + x; }, 0) / tavg.length : null;
+    if(part){
+      var dim = new Date(y, i + 1, 0).getDate(), days = a.partial.days, spotE = days < 5 && lastV != null ? (m[i] + lastV) / 2 : m[i], bE = days < 15 ? 0.12 : 0.06;
+      list.push({idx:i, spot:spotE, bd:bE, kk:"kindEst", kp:{d:days, n:dim, a:m[i]}});
     } else {
       list.push({idx:i, spot:m[i], kk:"kindMonth", kp:{}});
     }
     for(k = 1; k <= 3; k++){
       var mi = (i + k) % 12, tt = typ(mi);
-      if(tt > 0){ list.push({idx:mi, spot:tt * (1 + (f - 1) * Math.pow(DECAY, k)), lo:home(tt, add), hi:home(tt * f, add), kk:"kindFc", kp:{}}); }
+      if(tt > 0 && mean3 != null && tbar > 0){ list.push({idx:mi, spot:mean3 * Math.sqrt(tt / tbar), bd:(mi >= 10 || mi <= 2) ? 0.3 : 0.2, kk:"kindFc", kp:{}}); }
     }
     // The shown range always contains the estimate and is never printed upside down (it was, for f < 1).
     return {months:list.map(function(x){
       x.price = home(x.spot, add);
-      if(x.lo != null){ var a2 = Math.min(x.lo, x.hi, x.price), b2 = Math.max(x.lo, x.hi, x.price); x.lo = a2; x.hi = b2; }
+      if(x.bd){ x.lo = x.price * (1 - x.bd); x.hi = x.price * (1 + x.bd); }
       return x;
-    }), f:f, i:i};
+    }), f:f, i:i, regime:f > REGIME_F};
   }
   window.__forecast = forecast;
 
@@ -1101,7 +1132,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(r){
       var cur = N.months.filter(function(x){ return x.idx === r.i; })[0];
       if(!S.homeEdited && S.contract === "avg"){ S.home = Math.round(cur.price * 100) / 100; save(); }
-      N.fc = r.f;
+      N.fc = r.f; N.regime = r.regime;
     }
     syncInputs(); update();
   }
@@ -1170,7 +1201,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(S.contract === "avg"){ ch.textContent = t("cHintAvg"); }
     else if(S.contract === "fixed"){ ch.textContent = t("cHintFixed"); }
     else { ch.textContent = N.hourly ? t("cHintHourly", {n:N.hourly.n, hours:N.hourly.hours.join(", ")}) : t("cHintHourlyNo"); }
-    $("monthnote").textContent = S.contract !== "avg" ? "" : (N.spotOk ? t("monthNote", {f:fmt(N.fc || 1, 1)}) : (N.spotErr ? t("spotNo", {x:fmt(DEFAULT.home)}) : ""));
+    $("monthnote").textContent = S.contract !== "avg" ? "" : (N.spotOk ? t("monthNote") + (N.regime ? " " + t("regimeWarn", {f:fmt(N.fc, 1)}) : "") : (N.spotErr ? t("spotNo", {x:fmt(DEFAULT.home)}) : ""));
     $("homepw").textContent = S.homeAmp > 0
       ? t("homePwAmp", {kw:fmt(Math.min(S.cv.kw, S.homeAmp * MAINS_V / 1000), 2), a:S.homeAmp, v:MAINS_V, raw:fmt(S.homeAmp * MAINS_V / 1000, 2), cap:S.homeAmp * MAINS_V / 1000 > S.cv.kw ? t("homePwCap", {kw:fmt(S.cv.kw, 1)}) : ""})
       : t("homePwWall", {kw:fmt(S.cv.kw, 1)});
@@ -1189,6 +1220,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     if(S.petrol < 8 || S.petrol > 30){ w.push(t("warnPetrol", {x:fmt(S.petrol)})); }
     if(S.home > 15){ w.push(t("warnHome", {x:fmt(S.home)})); }
     if(!S.feesEdited && S.contract !== "fixed" && new Date() > new Date(FEES_VALID_TO + "T23:59:59")){ w.push(t("warnFees")); }
+    if(!SAVE_OK){ w.push(t("saveFail")); }
     $("pricewarn").textContent = w.join(" ");
     $("pwnote").textContent = c ? t("pwChosen", {kw:fmt(Math.min(S.cv.kw, c.kw || S.cv.kw), 1), name:c.name, ckw:c.kw ? ", " + c.kw + " kW" : ""}) : t("pwNone", {kw:fmt(S.cv.kw, 1)});
   }
@@ -1229,10 +1261,10 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   $("car").addEventListener("change", function(e){ S.car = e.target.value; S.cv = Object.assign({}, PRESETS[S.car].v); S.perWeek = null; save(); syncInputs(); update(); });
   $("resetall").addEventListener("click", function(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(PCACHE); }catch(e){} location.reload(); });
   $("cvreset").addEventListener("click", function(){ S.cv = Object.assign({}, PRESETS[S.car].v); save(); syncInputs(); update(); });
-  $("sWinter").addEventListener("click", function(){ S.season = "winter"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
-  $("sSummer").addEventListener("click", function(){ S.season = "summer"; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
+  $("sWinter").addEventListener("click", function(){ S.season = "winter"; S.seasonAt = TODAY; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
+  $("sSummer").addEventListener("click", function(){ S.season = "summer"; S.seasonAt = TODAY; S.useTemp = false; S.temp = null; save(); syncInputs(); update(); });
   $("usetemp").addEventListener("change", function(e){ S.useTemp = e.target.checked; S.temp = null; save(); if(S.useTemp){ loadTemp(); } update(); });
-  [].forEach.call($("langs").children, function(b){ b.addEventListener("click", function(){ S.lang = b.getAttribute("data-l"); save(); syncInputs(); update(); }); });
+  [].forEach.call($("langs").children, function(b){ b.addEventListener("click", function(){ S.lang = LANG_SAVED = b.getAttribute("data-l"); save(); syncInputs(); update(); }); });
   AREAS.forEach(function(a){ var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-a", a); b.textContent = a; b.addEventListener("click", function(){ S.area = a; save(); applySpot(); }); $("areas").appendChild(b); });
   CONTRACTS.forEach(function(c){ var b = document.createElement("button"); b.className = "chip"; b.setAttribute("data-c", c); b.addEventListener("click", function(){ S.contract = c; if(c === "avg"){ S.homeEdited = false; } save(); applySpot(); }); $("contracts").appendChild(b); });
   AMPS.concat([0]).forEach(function(a){
