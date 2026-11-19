@@ -302,6 +302,58 @@
     "lS": 8.0,
     "lW": 9.5
    }
+  },
+  {
+   "id": "kia_ev3_std",
+   "type": "bev",
+   "name": "Kia EV3 FWD (58.3 kWh)",
+   "dc": 101,
+   "conf": "A",
+   "src": "Kia Sweden product fact sheet (capacity, AC 10.5 kW, DC, WLTP range and consumption, FWD 17\" wheels); net kWh assumed 0.95 x capacity",
+   "raw": {
+    "gross_kwh": 58.3,
+    "net_kwh_assumed": 55.4,
+    "ac_kw": 10.5,
+    "dc_kw": 101,
+    "wltp_km": 436,
+    "wltp_kwh_100": 14.9,
+    "url": "https://www.kia.com/api/bin/docDownload?program=brochure&locale=se&path=%2Fcontent%2Fdam%2Fkwcms%2Fkme%2Fse%2Fsv%2Fassets%2Fcontents%2Futility%2Fspecifications%2Fev3%2FFaktablad-Kia-EV3.pdf"
+   },
+   "v": {
+    "usable": 60.9,
+    "kw": 10.5,
+    "hold": 10,
+    "elS": 16.9,
+    "elW": 21.8,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "kia_ev3_lr",
+   "type": "bev",
+   "name": "Kia EV3 FWD (81.4 kWh)",
+   "dc": 128,
+   "conf": "A",
+   "src": "Kia Sweden product fact sheet (capacity, AC 10.5 kW, DC, WLTP range and consumption, FWD 17\" wheels); net kWh assumed 0.95 x capacity",
+   "raw": {
+    "gross_kwh": 81.4,
+    "net_kwh_assumed": 77.3,
+    "ac_kw": 10.5,
+    "dc_kw": 128,
+    "wltp_km": 605,
+    "wltp_kwh_100": 14.9,
+    "url": "https://www.kia.com/api/bin/docDownload?program=brochure&locale=se&path=%2Fcontent%2Fdam%2Fkwcms%2Fkme%2Fse%2Fsv%2Fassets%2Fcontents%2Futility%2Fspecifications%2Fev3%2FFaktablad-Kia-EV3.pdf"
+   },
+   "v": {
+    "usable": 85.0,
+    "kw": 10.5,
+    "hold": 10,
+    "elS": 16.9,
+    "elW": 21.8,
+    "lS": 8.0,
+    "lW": 9.5
+   }
   }
  ]
 }

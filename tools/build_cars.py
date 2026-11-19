@@ -66,6 +66,19 @@ for key, name, wltp_km, wltp_kwh in (("rwd", "Kia EV6 Long Range RWD (84 kWh)", 
                          "url": "https://www.kia.com/content/dam/kwcms/kme/se/sv/assets/campaigns/kia-sweden-ev6-specification.pdf"},
                  "v": {"usable": round(net * 1.1, 1), "kw": 10.5, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": lS, "lW": lW}})
 
+# Kia EV3: Kia Sweden's product fact sheet (valid from 2026-09-16), https://www.kia.com/api/bin/docDownload?program=brochure&locale=se&path=%2Fcontent%2Fdam%2Fkwcms%2Fkme%2Fse%2Fsv%2Fassets%2Fcontents%2Futility%2Fspecifications%2Fev3%2FFaktablad-Kia-EV3.pdf
+# Stated: battery capacity 58.3 / 81.4 kWh (no net figure: 0.95 x is an assumption), on-board charger 10.5 kW 3-phase, DC max 101 / 128 kW,
+# WLTP FWD up to 436 km (58.3 kWh, 17") 14.9 kWh/100 km and up to 605 km (81.4 kWh, 17") 14.9 kWh/100 km. Consumption is the socket figure (only REAL / 1.1 applies).
+EV3_URL = "https://www.kia.com/api/bin/docDownload?program=brochure&locale=se&path=%2Fcontent%2Fdam%2Fkwcms%2Fkme%2Fse%2Fsv%2Fassets%2Fcontents%2Futility%2Fspecifications%2Fev3%2FFaktablad-Kia-EV3.pdf"
+for key, gross, dc, wltp_km, wltp_kwh in (("std", 58.3, 101, 436, 14.9), ("lr", 81.4, 128, 605, 14.9)):
+    net = round(gross * 0.95, 1)
+    elS = round(wltp_kwh * REAL / 1.1, 1)
+    lS, lW = petrol(net)
+    cars.append({"id": "kia_ev3_" + key, "type": "bev", "name": "Kia EV3 FWD (" + str(gross).rstrip("0").rstrip(".") + " kWh)", "dc": dc, "conf": "A",
+                 "src": "Kia Sweden product fact sheet (capacity, AC 10.5 kW, DC, WLTP range and consumption, FWD 17\" wheels); net kWh assumed 0.95 x capacity",
+                 "raw": {"gross_kwh": gross, "net_kwh_assumed": net, "ac_kw": 10.5, "dc_kw": dc, "wltp_km": wltp_km, "wltp_kwh_100": wltp_kwh, "url": EV3_URL},
+                 "v": {"usable": round(net * 1.1, 1), "kw": 10.5, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": lS, "lW": lW}})
+
 doc = {"v": 1, "updated": "2026-11-19", "note": "Estimates, not measurements. Values are derived as described in docs/CARS.md; correct them with the consumption log.", "cars": cars}
 open(OUT, "w", encoding="utf-8").write(json.dumps(doc, ensure_ascii=False, indent=1))
 print(len(cars), "models written to", OUT)
