@@ -250,6 +250,58 @@
     "lS": 6.5,
     "lW": 7.5
    }
+  },
+  {
+   "id": "kia_ev6_lr_rwd",
+   "type": "bev",
+   "name": "Kia EV6 Long Range RWD (84 kWh)",
+   "dc": 258,
+   "conf": "A",
+   "src": "Kia Sweden product fact sheet (battery 84 kWh, AC 10.5 kW, DC 258 kW, WLTP range and consumption); net kWh assumed 0.95 x 84",
+   "raw": {
+    "gross_kwh": 84,
+    "net_kwh_assumed": 79.8,
+    "ac_kw": 10.5,
+    "dc_kw": 258,
+    "wltp_km": 582,
+    "wltp_kwh_100": 15.9,
+    "url": "https://www.kia.com/content/dam/kwcms/kme/se/sv/assets/campaigns/kia-sweden-ev6-specification.pdf"
+   },
+   "v": {
+    "usable": 87.8,
+    "kw": 10.5,
+    "hold": 10,
+    "elS": 18.1,
+    "elW": 23.3,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "kia_ev6_lr_awd",
+   "type": "bev",
+   "name": "Kia EV6 Long Range AWD (84 kWh)",
+   "dc": 258,
+   "conf": "A",
+   "src": "Kia Sweden product fact sheet (battery 84 kWh, AC 10.5 kW, DC 258 kW, WLTP range and consumption); net kWh assumed 0.95 x 84",
+   "raw": {
+    "gross_kwh": 84,
+    "net_kwh_assumed": 79.8,
+    "ac_kw": 10.5,
+    "dc_kw": 258,
+    "wltp_km": 546,
+    "wltp_kwh_100": 17.0,
+    "url": "https://www.kia.com/content/dam/kwcms/kme/se/sv/assets/campaigns/kia-sweden-ev6-specification.pdf"
+   },
+   "v": {
+    "usable": 87.8,
+    "kw": 10.5,
+    "hold": 10,
+    "elS": 19.3,
+    "elW": 24.9,
+    "lS": 8.0,
+    "lW": 9.5
+   }
   }
  ]
 }

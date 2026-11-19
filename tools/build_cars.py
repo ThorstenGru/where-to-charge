@@ -52,6 +52,20 @@ cars.append({"id": "vw_tiguan_ehybrid", "type": "phev", "name": "VW Tiguan eHybr
                      "url": "https://www.volkswagen-newsroom.com/en/press-releases/now-available-to-order-long-range-plug-in-hybrid-drives-for-the-tiguan-from-48655-euro-18182"},
              "v": {"usable": round(net * 1.1, 1), "kw": 11, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": 6.5, "lW": 7.5}})
 
+# Kia EV6: Kia Sweden's product fact sheet (valid from 2025-02-17), https://www.kia.com/content/dam/kwcms/kme/se/sv/assets/campaigns/kia-sweden-ev6-specification.pdf
+# Stated by Kia: battery capacity 84 kWh (no net figure), on-board charger 10.5 kW 3-phase, DC max 258 kW, WLTP up to 582 km (RWD, 15.9 kWh/100 km) and
+# 546 km (AWD, 17.0 kWh/100 km with 19" wheels). Net kWh is NOT stated: 0.95 x 84 is an assumption. WLTP consumption is already measured at the socket,
+# so only the real-world factor applies (REAL / 1.1).
+for key, name, wltp_km, wltp_kwh in (("rwd", "Kia EV6 Long Range RWD (84 kWh)", 582, 15.9), ("awd", "Kia EV6 Long Range AWD (84 kWh)", 546, 17.0)):
+    net = round(84 * 0.95, 1)
+    elS = round(wltp_kwh * REAL / 1.1, 1)
+    lS, lW = petrol(net)
+    cars.append({"id": "kia_ev6_lr_" + key, "type": "bev", "name": name, "dc": 258, "conf": "A",
+                 "src": "Kia Sweden product fact sheet (battery 84 kWh, AC 10.5 kW, DC 258 kW, WLTP range and consumption); net kWh assumed 0.95 x 84",
+                 "raw": {"gross_kwh": 84, "net_kwh_assumed": net, "ac_kw": 10.5, "dc_kw": 258, "wltp_km": wltp_km, "wltp_kwh_100": wltp_kwh,
+                         "url": "https://www.kia.com/content/dam/kwcms/kme/se/sv/assets/campaigns/kia-sweden-ev6-specification.pdf"},
+                 "v": {"usable": round(net * 1.1, 1), "kw": 10.5, "hold": 10, "elS": elS, "elW": round(elS * WINTER, 1), "lS": lS, "lW": lW}})
+
 doc = {"v": 1, "updated": "2026-11-19", "note": "Estimates, not measurements. Values are derived as described in docs/CARS.md; correct them with the consumption log.", "cars": cars}
 open(OUT, "w", encoding="utf-8").write(json.dumps(doc, ensure_ascii=False, indent=1))
 print(len(cars), "models written to", OUT)
