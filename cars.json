@@ -1,0 +1,255 @@
+{
+ "v": 1,
+ "updated": "2026-11-19",
+ "note": "Estimates, not measurements. Values are derived as described in docs/CARS.md; correct them with the consumption log.",
+ "cars": [
+  {
+   "id": "volkswagen_id_3_58",
+   "type": "bev",
+   "name": "VW ID.3 (58 kWh)",
+   "dc": 135.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 58.0,
+    "ac_kw": 11.0,
+    "dc_kw": 135.0,
+    "wltp_km": 428.0,
+    "year": 2025,
+    "entry": "volkswagen:id_3:2025:id_3"
+   },
+   "v": {
+    "usable": 63.8,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 16.9,
+    "elW": 21.8,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "volkswagen_id_3_77",
+   "type": "bev",
+   "name": "VW ID.3 (77 kWh)",
+   "dc": 175.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 77.0,
+    "ac_kw": 11.0,
+    "dc_kw": 175.0,
+    "wltp_km": 600.0,
+    "year": 2025,
+    "entry": "volkswagen:id_3:2025:id_3_gtx"
+   },
+   "v": {
+    "usable": 84.7,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 16.0,
+    "elW": 20.6,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "volkswagen_id_7_86",
+   "type": "bev",
+   "name": "VW ID.7 (86 kWh)",
+   "dc": 175.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 86.0,
+    "ac_kw": 11.0,
+    "dc_kw": 175.0,
+    "wltp_km": 700.0,
+    "year": 2025,
+    "entry": "volkswagen:id_7:2025:id_7"
+   },
+   "v": {
+    "usable": 94.6,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 15.4,
+    "elW": 19.9,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "cupra_born_58",
+   "type": "bev",
+   "name": "Cupra Born (58 kWh)",
+   "dc": 135.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 58.0,
+    "ac_kw": 11.0,
+    "dc_kw": 135.0,
+    "wltp_km": 430.0,
+    "year": 2025,
+    "entry": "cupra:born:2025:born"
+   },
+   "v": {
+    "usable": 63.8,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 16.9,
+    "elW": 21.8,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "cupra_born_77",
+   "type": "bev",
+   "name": "Cupra Born (77 kWh)",
+   "dc": 170.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 77.0,
+    "ac_kw": 11.0,
+    "dc_kw": 170.0,
+    "wltp_km": 550.0,
+    "year": 2025,
+    "entry": "cupra:born:2025:born_77kwh"
+   },
+   "v": {
+    "usable": 84.7,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 17.5,
+    "elW": 22.6,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "mg_mg4_61",
+   "type": "bev",
+   "name": "MG4 (61 kWh)",
+   "dc": 135.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 61.0,
+    "ac_kw": 11.0,
+    "dc_kw": 135.0,
+    "wltp_km": 450.0,
+    "year": 2025,
+    "entry": "mg:mg4:2025:mg4_long_range"
+   },
+   "v": {
+    "usable": 67.1,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 16.9,
+    "elW": 21.8,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "bmw_i4_81",
+   "type": "bev",
+   "name": "BMW i4 eDrive40 (81 kWh)",
+   "dc": 207.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 81.3,
+    "ac_kw": 11.0,
+    "dc_kw": 207.0,
+    "wltp_km": 598.0,
+    "year": 2025,
+    "entry": "bmw:i4:2025:i4"
+   },
+   "v": {
+    "usable": 89.4,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 17.0,
+    "elW": 21.9,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "tesla_model_3_57",
+   "type": "bev",
+   "name": "Tesla Model 3 RWD (57 kWh)",
+   "dc": 170.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 57.0,
+    "ac_kw": 11.0,
+    "dc_kw": 170.0,
+    "wltp_km": 554.0,
+    "year": 2025,
+    "entry": "tesla:model_3:2025:model_3"
+   },
+   "v": {
+    "usable": 62.7,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 12.9,
+    "elW": 16.6,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  },
+  {
+   "id": "tesla_model_3_75",
+   "type": "bev",
+   "name": "Tesla Model 3 Long Range (75 kWh)",
+   "dc": 250.0,
+   "conf": "B",
+   "src": "open-ev-data v1.24.0 (CDLA-Permissive-2.0, cites manufacturer data)",
+   "raw": {
+    "net_kwh": 75.0,
+    "ac_kw": 11.0,
+    "dc_kw": 250.0,
+    "wltp_km": 678.0,
+    "year": 2025,
+    "entry": "tesla:model_3:2025:model_3_long_range"
+   },
+   "v": {
+    "usable": 82.5,
+    "kw": 11.0,
+    "hold": 10,
+    "elS": 13.8,
+    "elW": 17.8,
+    "lS": 8.0,
+    "lW": 9.5
+   }
+  },
+  {
+   "id": "vw_tiguan_ehybrid",
+   "type": "phev",
+   "name": "VW Tiguan eHybrid (19.7 kWh)",
+   "dc": null,
+   "conf": "A",
+   "src": "Volkswagen press release (battery, AC power, range); consumption derived; petrol values are the generic profile",
+   "raw": {
+    "net_kwh": 19.7,
+    "ac_kw": 11,
+    "wltp_ev_range_km": 120.0,
+    "url": "https://www.volkswagen-newsroom.com/en/press-releases/now-available-to-order-long-range-plug-in-hybrid-drives-for-the-tiguan-from-48655-euro-18182"
+   },
+   "v": {
+    "usable": 21.7,
+    "kw": 11,
+    "hold": 10,
+    "elS": 20.5,
+    "elW": 26.4,
+    "lS": 6.5,
+    "lW": 7.5
+   }
+  }
+ ]
+}

@@ -267,7 +267,15 @@ document.querySelector("iframe").onload = function () {
     if (saved === null) { localStorage.removeItem(KEYS); } else { localStorage.setItem(KEYS, saved); }
     localStorage.removeItem(KEYS + "-bad");
     h.remove();
-    finish();
+    return fetch("../cars.json").then(function (r) { return r.json(); }).then(function (j) {
+      var LIMS = {usable: [1, 200], kw: [1, 50], hold: [0, 60], elS: [5, 80], elW: [5, 80], lS: [1, 30], lW: [1, 30]};
+      yes("cars.json: version 1 with models", j.v === 1 && j.cars.length >= 5);
+      yes("cars.json: unique ids", new Set(j.cars.map(function (c) { return c.id; })).size === j.cars.length);
+      yes("cars.json: every value inside the app's limits", j.cars.every(function (c) { return Object.keys(LIMS).every(function (k) { return c.v[k] >= LIMS[k][0] && c.v[k] <= LIMS[k][1]; }); }));
+      yes("cars.json: source and confidence on every model", j.cars.every(function (c) { return c.src && /^[AB]$/.test(c.conf) && (c.type === "bev" || c.type === "phev"); }));
+      yes("cars.json: winter consumption above summer, a BEV gets a DC peak", j.cars.every(function (c) { return c.v.elW > c.v.elS && (c.type !== "bev" || c.dc >= 50); }));
+      finish();
+    });
   });
 };
 </script>
