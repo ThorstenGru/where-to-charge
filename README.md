@@ -14,7 +14,7 @@ Languages: English, Deutsch, Svenska (switch top right; the browser language is 
 - `TESTING.md`: phone test checklist and calibration table.
 
 ## What the page does
-Page order: location (it sets petrol price and chargers; it runs by itself when the permission is already granted), recommendation, break-even, then what you can adjust: car, time at the charger, chargers on the map, petrol, electricity at home, distance, per year, details, consumption log, car settings.
+Page order: recommendation (a "close call" for a plug-in hybrid when the gain is within ±0.45 SEK/kWh of the 0.30 limit), your basis (car kind, price area, optional location; the answer is there with the defaults, no setup), break-even, then one layer down under "Adjust and details": car, time at the charger, chargers on the map, petrol, electricity at home, distance, per year, details, consumption log, car settings.
 
 - **Car type:** presets "Plug-in hybrid (typical)", "Hyundai Santa Fe PHEV 2025" and "Electric car (typical)". Every value (usable battery energy at the socket, AC limit, hybrid hold level or reserve buffer, electric consumption and petrol consumption, summer and winter) can be edited; changes are stored on the device. For a BEV the "petrol" values describe the comparable petrol car and there is no hybrid mode.
 - **Recommendation:** PHEV: charge at home, "top up on the road only below X SEK/kWh", or drive in hybrid mode. BEV: where to charge, plus a hint when a petrol car would be cheaper.

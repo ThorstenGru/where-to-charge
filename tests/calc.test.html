@@ -59,7 +59,11 @@ document.querySelector("iframe").onload = function () {
   yes("with a charger: top up only below the home price", /less than 4\.00 SEK\/kWh/.test(good.act));
   yes("with a charger: the rest at home", /rest at home/.test(good.act));
   var cheapHome = adv(calc(mk({home: 4.9}), ch), 1);
-  yes("weak home gain (0.08): HEV mode", cheapHome.big === "Drive in HEV mode");
+  yes("weak home gain (0.08): close call, not a clear verdict", cheapHome.big === "Close call" && cheapHome.cls === "knapp");
+  yes("clearly dearer home (-0.62): HEV mode", adv(calc(mk({home: 5.6}), ch), 1).big === "Drive in HEV mode");
+  yes("home gain 0.70 is still a close call (within 0.45 of 0.30)", adv(calc(mk({home: 4.28}), ch), 1).big === "Close call");
+  yes("home gain 0.80 is clear: charge at home", adv(calc(mk({home: 4.18}), ch), 1).big === "Charge at home");
+  yes("BEV never gets a close call", adv(calc(mk({petrol: 15, home: 4.9, soc: 30}, "bev"), ch), 1).big === "Charge at home");
   yes("HEV: road limit is named", /below 4\.68 SEK\/kWh/.test(cheapHome.l2));
   yes("no charger: points to the map", /Use my location/.test(adv(calc(mk({home: 4.0}), null), 1).l2));
   yes("full battery: do not charge", adv(calc(mk({soc: 100, home: 4}), null), 1).big === "Do not charge");
