@@ -23,6 +23,18 @@ Page: https://thorstengru.github.io/where-to-charge/
 - [ ] Tap a charger on the map (or choose it in the list): details appear and the recommendation names the highest road price worth paying. Compare it with the price in the charger's app. "Navigate" opens the route, "Find the price" a web search.
 - [ ] Switch on the outside temperature (opt-in): the season note shows the temperature.
 
+## 3b. New since 2026-11-19 (10 min)
+- [ ] First open: the answer is at the top with no setup. Under it "Your basis": plug-in hybrid / electric car, price area SE1-SE4, the basis line, "Use my location". Everything else sits under "Adjust and details" (closed). Nothing cut off at the right edge (the EN DE SV switch).
+- [ ] A "Close call" verdict (amber, dashed) appears when the home gain is near 0.30 SEK/kWh: does it read clearly?
+- [ ] Open "Adjust and details": the map draws completely (no grey area) after opening.
+- [ ] Electric car: tick "I cannot charge at home or at work": the answer becomes "Charge on the road" with list prices and a cost per 100 km table; untick: back to normal.
+- [ ] Electric car + "Use my location": violet dots = fast chargers (CCS/CHAdeMO), also in the list ("Fast DC ... kW"). Pick one: the power note says "about X kW on average". Is the charger really there? Is the kW plausible?
+- [ ] "Your model (optional)": pick one: battery, AC power and consumption change; Santa Fe stays as a car type in the list.
+- [ ] Petrol price: after 1 December it should show the +3.00 SEK/l step (note "Estimate ..." for 3 days); from about 20 November a notice announces it.
+- [ ] Type a petrol price: after 7 days it falls back to the live price with a notice.
+- [ ] Safari: close the tab and reopen it the next day: are your settings still there (also after installing to the Home Screen: that is a separate store, set them again)?
+- [ ] Open "Privacy and disclaimer": text readable in your language; "Delete all my saved settings and log" works.
+
 ## 4. Calibrate the assumptions (over 2-3 weeks)
 Write down the real values and change the defaults in `index.html` (or on the page) if they differ.
 
